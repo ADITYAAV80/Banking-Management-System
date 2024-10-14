@@ -60,8 +60,8 @@ bool login_admin(int connectionFileDescriptor)
         return false;
     }
 
-    printf("%s", admin_id);
-    printf("%s\n", readBuffer);
+    // printf("%s", admin_id);
+    // printf("%s\n", readBuffer);
 
     if ((strcmp(admin_id, "admin") == 0) && strcmp(readBuffer, ADMIN_PASSWORD) == 0)
     {
