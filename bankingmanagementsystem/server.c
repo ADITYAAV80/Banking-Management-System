@@ -23,42 +23,49 @@ void portal_handler(int connectionFileDescriptor)
 	char readBuffer[1000], writeBuffer[1000];
 	ssize_t readBytes, writeBytes;
 	int choice;
-	writeBytes = write(connectionFileDescriptor, INITIAL_PROMPT, strlen(INITIAL_PROMPT));
-	if (writeBytes == -1)
+	while (1)
 	{
-		perror("Error while sending data to the user");
-	}
-	else
-	{
-		bzero(readBuffer, sizeof(readBuffer));
-		readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
-		if (readBytes == -1)
+		writeBytes = write(connectionFileDescriptor, INITIAL_PROMPT, strlen(INITIAL_PROMPT));
+		if (writeBytes == -1)
 		{
-			perror("Error while reading from client");
-		}
-		else if (readBytes == 0)
-		{
-			printf("No data was sent to the server\n");
+			perror("Error while sending data to the user");
 		}
 		else
 		{
-			choice = atoi(readBuffer);
-			switch (choice)
+			bzero(readBuffer, sizeof(readBuffer));
+			readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+			if (readBytes == -1)
 			{
-			case 1:
-				admin_portal(connectionFileDescriptor);
-				break;
-			case 2:
-				employee_portal(connectionFileDescriptor);
-				break;
-			case 3:
-				// manager_portal(connectionFileDescriptor);
-				break;
-			case 4:
-				// customer_portal(connectionFileDescriptor);
-				break;
-			default:
-				break;
+				perror("Error while reading from client");
+			}
+			else if (readBytes == 0)
+			{
+				printf("No data was sent to the server\n");
+			}
+			else
+			{
+				choice = atoi(readBuffer);
+				switch (choice)
+				{
+				case 1:
+					admin_portal(connectionFileDescriptor);
+					break;
+				case 2:
+					employee_portal(connectionFileDescriptor);
+					break;
+				case 3:
+					// manager_portal(connectionFileDescriptor);
+					break;
+				case 4:
+					// customer_portal(connectionFileDescriptor);
+					break;
+				default:
+					printf("Closing the connection to server\n");
+					bzero(writeBuffer, sizeof(writeBuffer));
+					strcpy(writeBuffer, "Exit");
+					writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+					return;
+				}
 			}
 		}
 	}

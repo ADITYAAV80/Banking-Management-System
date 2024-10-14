@@ -59,7 +59,11 @@ bool login_admin(int connectionFileDescriptor)
         perror("Error in reading\n");
         return false;
     }
-    if ((strcmp(admin_id, "ADMIN") == 0) && strcmp(readBuffer, ADMIN_PASSWORD) == 0)
+
+    printf("%s", admin_id);
+    printf("%s\n", readBuffer);
+
+    if ((strcmp(admin_id, "admin") == 0) && strcmp(readBuffer, ADMIN_PASSWORD) == 0)
     {
         printf("Inside authentication\n");
         return true;
@@ -68,7 +72,6 @@ bool login_admin(int connectionFileDescriptor)
     {
         return false;
     }
-    return true;
 }
 
 #endif

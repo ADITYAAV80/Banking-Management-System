@@ -31,7 +31,12 @@ void portal_handler(int socketFileDescriptor)
         {
             bzero(writeBuffer, sizeof(writeBuffer));
             printf("%s\n", readBuffer);
-            printf("Hello");
+
+            if (strcmp(readBuffer, "Exit") == 0)
+            {
+                printf("Finished......");
+                break;
+            }
             if (!strcmp(readBuffer, "PASSWORD:"))
             {
                 struct termios oldt, newt;
@@ -54,6 +59,7 @@ void portal_handler(int socketFileDescriptor)
             }
 
             writeBytes = write(socketFileDescriptor, writeBuffer, strlen(writeBuffer));
+            /*printf("\nyou are writing : %s\n", writeBuffer);*/
             if (writeBytes == -1)
             {
                 perror("Error while writing to client socket");
