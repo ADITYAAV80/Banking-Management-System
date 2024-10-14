@@ -13,9 +13,10 @@
 #define ADMIN_PASSWORD_DISPLAY "PASSWORD:"
 #define ADMIN_PASSWORD "admin"
 #define ADMIN_LOGIN_SUCCESS "******** WELCOME TO ADMIN PORTAL ********.\nYou are now logged in.\n"
-#define ADMIN_MENU "Welcome to Admin Menu.\nChoose the option you want to proceed with\n1. ADD EMPLOYEE\n2. MODIFY EMPLOYEE\n3. ADD MANAGER\n4. MODIFY MANAGER\n5. ADD CUSTOMER\n6. MODIFY CUSTOMER\n7. CHANGE PASSWORD\n8. VIEW EMPLOYEE DETAILS\n9. VIEW MANAGER DETAILS\n10. LOGOUT AND EXIT\nCHOOSE THE OPTION\n"
+#define ADMIN_MENU "Welcome to Admin Menu.\nChoose the option you want to proceed with\n1. ADD EMPLOYEE\n2. MODIFY EMPLOYEE\n3. ADD MANAGER\n4. MODIFY MANAGER\n5. ADD CUSTOMER\n6. MODIFY CUSTOMER\n7. CHANGE PASSWORD\n8. VIEW EMPLOYEE DETAILS\n9. VIEW MANAGER DETAILS\n10. VIEW  CUSTOMER DETAILS\n11. LOGOUT AND EXIT\nCHOOSE THE OPTION\n"
 #define ADMIN_LOGOUT "********** ADMIN LOGGED OUT **********\n"
 #define ADMIN_AGAIN "You have entered wrong option\n"
+#define S_ADMIN_LOGOUT "ADMIN has been logged out\n"
 
 #define EMPLOYEE_NAME "Update employee name\n"
 #define EMPLOYEE_AGE "Update employee age\n"
@@ -40,8 +41,39 @@
 #define MANAGER_UPDATE "Enter The LOGIN ID to be updated\n"
 #define MANAGER_DETAILS "Enter the Login ID whose details you want\n"
 
+#define CUSTOMER_NAME "Update customer name\n"
+#define CUSTOMER_AGE "Update customer age\n"
+#define CUSTOMER_ADDRESS "Update the customer address\n"
+#define CUSTOMER_EMAIL "Update Email for the customer\n"
+#define CUSTOMER_LOGIN "Update LOGIN ID for the customer\n"
+#define CUSTOMER_PASSWORD "Update Password for the customer\n"
+#define CUSTOMER_ADDED "Employee updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
+#define CUSTOMER_UPDATE "Enter The LOGIN ID to be updated\n"
+#define CUSTOMER_DETAILS "Enter the Login ID whose details you want\n"
+
 // employee
 #define S_EMPLOYEE_LOGIN_WELCOME "*********** WELCOME EMPLOYEE ***********\nPlease authenticate yourself.\nLOGIN_ID"
 #define S_EMPLOYEE_PASSWORD "PASSWORD:"
+#define S_EMPLOYEE_LOGIN_SUCCESS "****** Welcome to Employee Portal ******\nYou are now logged in\n"
+#define S_EMPLOYEE_MENU "Choose the option you want to proceed with\n1. VIEW  OFFERING COURSE\n2. ADD NEW COURSE\n3. REMOVE COURSE FROM CATALOG\n4. CHANGE PASSWORD\n5. LOGOUT & EXIT\n"
+#define S_EMPLOYEE_LOGOUT "EMPLOYEE has been logged out\n"
+#define S_EMPLOYEE_AGAIN "You have entered wrong option\n"
+#define S_EMPLOYEE_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
+
+// manager
+#define S_MANAGER_LOGIN_WELCOME "*********** WELCOME MANAGER ***********\nPlease authenticate yourself.\nLOGIN_ID"
+#define S_MANAGER_PASSWORD "PASSWORD:"
+#define S_MANAGER_LOGIN_SUCCESS "****** Welcome to Manager Portal ******\nYou are now logged in\n"
+#define S_MANAGER_MENU "Choose the option you want to proceed with\n1. ACTIVATE CUSTOMER ACCOUNTS\n2. DEACTIVATE CUSTOMER ACCOUNTS\n3. ASSIGN LOAN TO EMPLOYEES\n4. CHANGE PASSWORD\n5. SEE CUSTOMER FEEDBACK\n6. LOGOUT & EXIT\n"
+#define S_MANAGER_LOGOUT "MANAGER has been logged out\n"
+#define S_MANAGER_AGAIN "You have entered wrong option\n"
+#define S_MANAGER_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
+#define CUSTOMER_BLOCK "Enter the Login ID of the customer to be BLOCKED\n(you can always UNBLOCK them)\n"
+#define CUSTOMER_BLOCKED "The Customer has been BLOCKED\nPress any key to exit!\n"
+#define CUSTOMER_NOT_BLOCKED "The Customer has NOT been BLOCKED\nWrong LOGIN ID!\nPress any key to exit!\n"
+#define CUSTOMER_ACTIVE "Enter the Login ID of the customer to be ACTIVATED\n"
+#define CUSTOMER_ACTIVATED "The Customer has been ACTIVATED\nPress any key to exit!\n"
+#define CUSTOMER_NOT_ACTIVATED "The Customer has NOT been ACTIVATED\nWrong LOGIN ID!\nPress any key to exit!\n"
+#define S_MANAGER_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
 
 #endif

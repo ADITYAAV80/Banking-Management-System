@@ -1,5 +1,5 @@
-#ifndef LOGIN_EMPLOYEE
-#define LOGIN_EMPLOYEE
+#ifndef LOGIN_MANAGER
+#define LOGIN_MANAGER
 
 #include <stdio.h>     //SEEKSET
 #include <stdbool.h>   // Import for `bool` data type
@@ -12,23 +12,23 @@
 #include <unistd.h>    //read, close
 
 #include "../../functions/server_const.h"
-#include "../../struct/struct_employee.h"
+#include "../../struct/struct_manager.h"
 
-bool login_employee(int connectionFileDescriptor, char *student_id, char *passBuffer);
-bool employee_password_checker(char *student_id, char *passBuffer);
+bool login_manager(int connectionFileDescriptor, char *student_id, char *passBuffer);
+bool manager_password_checker(char *student_id, char *passBuffer);
 
-bool login_employee(int connectionFileDescriptor, char *student_id, char *passBuffer)
+bool login_manager(int connectionFileDescriptor, char *student_id, char *passBuffer)
 {
-    if (employee_password_checker(student_id, passBuffer))
+    if (manager_password_checker(student_id, passBuffer))
     {
         return true;
     }
     return false;
 }
 
-bool employee_password_checker(char *login_id, char *password)
+bool manager_password_checker(char *login_id, char *password)
 {
-    int fileDescriptor = open("EMPLOYEE_FILE", O_RDONLY);
+    int fileDescriptor = open("MANAGER_FILE", O_RDONLY);
 
     if (fileDescriptor == -1)
     {
@@ -50,13 +50,13 @@ bool employee_password_checker(char *login_id, char *password)
         close(fileDescriptor);
         exit(EXIT_FAILURE);
     }
-    struct employee_struct employee;
+    struct manager_struct manager;
 
-    while (read(fileDescriptor, &employee, sizeof(struct employee_struct)) == sizeof(struct employee_struct))
+    while (read(fileDescriptor, &manager, sizeof(struct manager_struct)) == sizeof(struct manager_struct))
     {
-        if (strcmp(employee.login, login_id) == 0)
+        if (strcmp(manager.login, login_id) == 0)
         {
-            if (strcmp(employee.password, password) == 0)
+            if (strcmp(manager.password, password) == 0)
             {
                 printf("Password match\n");
                 // unlocking

@@ -54,7 +54,7 @@ void portal_handler(int connectionFileDescriptor)
 					employee_portal(connectionFileDescriptor);
 					break;
 				case 3:
-					// manager_portal(connectionFileDescriptor);
+					manager_portal(connectionFileDescriptor);
 					break;
 				case 4:
 					// customer_portal(connectionFileDescriptor);
