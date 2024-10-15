@@ -8,6 +8,7 @@
 #include <string.h>     // Import for string functions
 #include <stdlib.h>
 #include <termios.h>
+
 void portal_handler(int socketFileDescriptor)
 {
     char readBuffer[1000], writeBuffer[1000];

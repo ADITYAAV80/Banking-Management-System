@@ -5,8 +5,12 @@
 #define EXIT "Enter any character and press ENTER to EXIT\n"
 
 // server
-#define INITIAL_PROMPT "*********** BANK EMPLOYEE PORTAL ***********\nPlease specify by pressing:\n1 for ADMIN login\n2 for EMPLOYEE login\n3 for MANAGER login\n4 for CUSTOMER Login\nPress any other number to exit\n"
+#define INITIAL_PROMPT "*********** BANK EMPLOYEE PORTAL ***********\nPlease specify by pressing:\n1 for ADMIN login\n2 for EMPLOYEE login\n3 for MANAGER login\n4 for CUSTOMER Login\nEnter any character and press ENTER to EXIT\n"
 #define MAX_LOGGED_IN 100
+
+// login
+// #define MAX_USERS 100
+// #define USERNAME_LENGTH 30
 
 // admin
 #define ADMIN_LOGIN_WELCOME "*********** WELCOME ADMIN ***********\nLOGIN_ID"
@@ -47,7 +51,7 @@
 #define CUSTOMER_EMAIL "Update Email for the customer\n"
 #define CUSTOMER_LOGIN "Update LOGIN ID for the customer\n"
 #define CUSTOMER_PASSWORD "Update Password for the customer\n"
-#define CUSTOMER_ADDED "Employee updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
+#define CUSTOMER_ADDED "Customer updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 #define CUSTOMER_UPDATE "Enter The LOGIN ID to be updated\n"
 #define CUSTOMER_DETAILS "Enter the Login ID whose details you want\n"
 
@@ -55,7 +59,7 @@
 #define S_EMPLOYEE_LOGIN_WELCOME "*********** WELCOME EMPLOYEE ***********\nPlease authenticate yourself.\nLOGIN_ID"
 #define S_EMPLOYEE_PASSWORD "PASSWORD:"
 #define S_EMPLOYEE_LOGIN_SUCCESS "****** Welcome to Employee Portal ******\nYou are now logged in\n"
-#define S_EMPLOYEE_MENU "Choose the option you want to proceed with\n1. VIEW  OFFERING COURSE\n2. ADD NEW COURSE\n3. REMOVE COURSE FROM CATALOG\n4. CHANGE PASSWORD\n5. LOGOUT & EXIT\n"
+#define S_EMPLOYEE_MENU "Choose the option you want to proceed with\n1. ADD CUSTOMER\n2. MODIFY CUSTOMER\n3. VIEW LOAN APPLICATIONS\n4. ACCEPT REJECT LOAN APPLICATIONS\n5. VIEW CUSTOMER TRANSACTIONS\n6. CHANGE PASSWORD\n7. LOGOUT &EXIT\n"
 #define S_EMPLOYEE_LOGOUT "EMPLOYEE has been logged out\n"
 #define S_EMPLOYEE_AGAIN "You have entered wrong option\n"
 #define S_EMPLOYEE_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
@@ -74,6 +78,16 @@
 #define CUSTOMER_ACTIVE "Enter the Login ID of the customer to be ACTIVATED\n"
 #define CUSTOMER_ACTIVATED "The Customer has been ACTIVATED\nPress any key to exit!\n"
 #define CUSTOMER_NOT_ACTIVATED "The Customer has NOT been ACTIVATED\nWrong LOGIN ID!\nPress any key to exit!\n"
-#define S_MANAGER_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
+
+// customer
+#define S_CUSTOMER_LOGIN_WELCOME "*********** WELCOME CUSTOMER ***********\nPlease authenticate yourself.\nLOGIN_ID"
+#define S_CUSTOMER_PASSWORD "PASSWORD:"
+#define S_CUSTOMER_LOGIN_SUCCESS "****** Welcome to Employee Portal ******\nYou are now logged in\n"
+#define S_CUSTOMER_MENU "Choose the option you want to proceed with\n1. VIEW ACCOUNT BALANCE\n2. DEPOSIT MONEY\n3. WITHDRAW MONEY \n4. TRANSFER FUNDS\n5. APPLY LOAN\n6. CHANGE PASSWORD\n7. ADD FEEDBACK\n8. VIEW_TRANSACTION_HISTORY\n9. LOGOUT & EXIT"
+#define S_CUSTOMER_LOGOUT "CUSTOMER has been logged out\n"
+#define S_CUSTOMER_AGAIN "You have entered wrong option\n"
+#define S_CUSTOMER_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
+#define ENTER_FEEDBACK "*******ENTER FEEDBACK [limit to 999 characters]*********\n"
+#define FEEDBACK_ADDED "Feedback updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 
 #endif

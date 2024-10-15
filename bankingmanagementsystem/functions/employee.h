@@ -101,21 +101,18 @@ bool employee_portal(int connectionFileDescriptor)
                 modify_customer_employee(connectionFileDescriptor);
                 break;
             case 3:
-                process_loan_applications(connectionFileDescriptor);
+                view_assigned_loan_applications(connectionFileDescriptor);
                 break;
             case 4:
                 approve_reject_loans(connectionFileDescriptor);
                 break;
             case 5:
-                view_assigned_loan_applications(connectionFileDescriptor);
-                break;
-            case 6:
                 view_customer_transactions(connectionFileDescriptor);
                 break;
-            case 7:
+            case 6:
                 change_password_employee(connectionFileDescriptor,employee_id);
                 break;
-            case 8:
+            case 7:
                 return true;
             default:
                 return true;

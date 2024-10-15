@@ -1,5 +1,6 @@
 #ifndef CUSTOMER_STRUCT
 #define CUSTOMER_STRUCT
+#include <stdbool.h>
 
 struct customer_struct
 {

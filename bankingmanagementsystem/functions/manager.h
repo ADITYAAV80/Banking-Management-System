@@ -327,7 +327,79 @@ bool activate_customers_manager(int connectionFileDescriptor, char *manager_id)
 
 bool assign_loans(int connectionFileDescriptor, char *manager_id) {}
 
-bool review_feedback(int connectionFileDescriptor, char *manager_id) {}
+bool review_feedback(int connectionFileDescriptor, char *manager_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+
+    // the FEEDBACK_FILE has the details of the feedback
+    int feedbackFileDescriptor = open("FEEDBACK_FILE", O_RDONLY, 0777);
+    if (feedbackFileDescriptor == -1)
+    {
+        perror("Error while opening feedback file");
+        return false;
+    }
+
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_RDLCK;    // Read lock
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_start = 0;         // Offset 0
+    lock.l_len = 0;           // Lock the entire file
+
+    // Try to acquire the lock in blocking mode
+    if (fcntl(feedbackFileDescriptor, F_SETLKW, &lock) == -1)
+    {
+        perror("Error locking the file");
+        close(feedbackFileDescriptor);
+        return false;
+    }
+
+    struct feedback_struct feedback1;
+    char FeedbackList[2000]; // Increased size to accommodate larger strings
+    FeedbackList[0] = '\0';  // Initialize the feedback list string
+
+    while (read(feedbackFileDescriptor, &feedback1, sizeof(struct feedback_struct)) == sizeof(struct feedback_struct))
+    {
+        char myStr[1100];
+        sprintf(myStr, "Customer: %s\n", feedback1.customer);
+        strcat(FeedbackList, myStr);
+
+        sprintf(myStr, "Feedback: %s\n", feedback1.feedback);
+        strcat(FeedbackList, myStr);
+
+        strcpy(writeBuffer, FeedbackList);
+        strcat(writeBuffer, "To see next record press a character followed by Enter\n");
+        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+        if (writeBytes == -1)
+        {
+            perror("Error while writing to connection!");
+            close(feedbackFileDescriptor);
+            return false;
+        }
+        readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+        bzero(FeedbackList, sizeof(FeedbackList));
+        bzero(writeBuffer, sizeof(writeBuffer));
+    }
+
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing to connection!");
+        close(feedbackFileDescriptor);
+        return false;
+    }
+
+    // Release the lock after reading all feedback
+    lock.l_type = F_UNLCK;
+    if (fcntl(feedbackFileDescriptor, F_SETLK, &lock) == -1)
+    {
+        perror("Error releasing the lock");
+    }
+
+    close(feedbackFileDescriptor);
+    return true;
+}
 
 bool change_password_manager(int connectionFileDescriptor, char *manager_id)
 {

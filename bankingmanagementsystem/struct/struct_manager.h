@@ -1,5 +1,6 @@
 #ifndef MANAGER_STRUCT
 #define MANAGER_STRUCT
+#include <stdbool.h>
 
 struct manager_struct
 {

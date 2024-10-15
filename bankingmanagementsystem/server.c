@@ -17,6 +17,14 @@
 #include "functions/manager.h"
 #include "functions/admin.h"
 
+/*
+#define MAX_USERS 100
+#define USERNAME_LENGTH 30
+
+char logged_in_users[MAX_USERS][USERNAME_LENGTH];
+int current_user_count = 0;
+*/
+
 void portal_handler(int connectionFileDescriptor)
 {
 	printf("Connection is made\n");
@@ -57,7 +65,7 @@ void portal_handler(int connectionFileDescriptor)
 					manager_portal(connectionFileDescriptor);
 					break;
 				case 4:
-					// customer_portal(connectionFileDescriptor);
+					customer_portal(connectionFileDescriptor);
 					break;
 				default:
 					printf("Closing the connection to server\n");

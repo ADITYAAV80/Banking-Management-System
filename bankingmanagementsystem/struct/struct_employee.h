@@ -1,5 +1,6 @@
 #ifndef EMPLOYEE_STRUCT
 #define EMPLOYEE_STRUCT
+#include <stdbool.h>
 
 struct employee_struct
 {
