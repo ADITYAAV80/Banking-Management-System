@@ -11,14 +11,7 @@
 #include <stdlib.h>    // Import for `atoi`
 #include <errno.h>     // Import for `errno`
 
-#include <sys/ipc.h> // For shared memory
-#include <sys/shm.h> // For shared memory operations
-
 #include "../../functions/server_const.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
 bool login_admin(int connectionFileDescriptor);
 
@@ -49,26 +42,23 @@ bool login_admin(int connectionFileDescriptor)
     char admin_id[20];
     strcpy(admin_id, readBuffer);
 
-    /*
-    if (is_user_logged_in(admin_id))
-    {
-        strcpy(writeBuffer, "User already logged in\nPress any character followed by Enter to Menu");
-        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-        if (writeBytes == -1)
-        {
-            perror("Error in writing\n");
-            return false;
-        }
-        readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
-        if (readBytes == -1)
-        {
-            perror("Error in reading\n");
-            return false;
-        }
+    bzero(readBuffer, sizeof(readBuffer));
+    bzero(writeBuffer, sizeof(writeBuffer));
 
-        return 0;
+    strcpy(writeBuffer, ADMIN_PASSWORD_DISPLAY);
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error in writing\n");
+        return false;
     }
-    */
+
+    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
+    {
+        perror("Error in reading\n");
+        return false;
+    }
 
     // printf("%s", admin_id);
     // printf("%s\n", readBuffer);
@@ -76,7 +66,6 @@ bool login_admin(int connectionFileDescriptor)
     if ((strcmp(admin_id, "admin") == 0) && strcmp(readBuffer, ADMIN_PASSWORD) == 0)
     {
         printf("Inside authentication\n");
-        /*strcpy(logged_in_users[current_user_count], admin_id);*/
         return true;
     }
     else

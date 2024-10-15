@@ -13,6 +13,7 @@
 
 #include "../../functions/server_const.h"
 #include "../../struct/struct_customer.h"
+#include "login_common.h"
 
 bool login_customer(int connectionFileDescriptor, char *customer_id, char *passBuffer);
 bool customer_password_checker(char *customer_id, char *passBuffer);

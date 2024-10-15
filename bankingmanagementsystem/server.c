@@ -17,13 +17,8 @@
 #include "functions/manager.h"
 #include "functions/admin.h"
 
-/*
-#define MAX_USERS 100
-#define USERNAME_LENGTH 30
-
-char logged_in_users[MAX_USERS][USERNAME_LENGTH];
+char logged_in_users[MAX_USERS][USERNAME_LENGTH] = {0};
 int current_user_count = 0;
-*/
 
 void portal_handler(int connectionFileDescriptor)
 {

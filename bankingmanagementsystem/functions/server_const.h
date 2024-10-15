@@ -90,4 +90,10 @@
 #define ENTER_FEEDBACK "*******ENTER FEEDBACK [limit to 999 characters]*********\n"
 #define FEEDBACK_ADDED "Feedback updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 
+#define MAX_USERS 100
+#define USERNAME_LENGTH 30
+
+extern char logged_in_users[MAX_USERS][USERNAME_LENGTH]; // Declare the user array
+extern int current_user_count;
+
 #endif
