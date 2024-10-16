@@ -59,6 +59,8 @@ bool employee_password_checker(char *login_id, char *password)
             if (strcmp(employee.password, password) == 0)
             {
                 printf("Password match\n");
+                add_user(login_id);
+                print_logged_in_users();
                 // unlocking
                 lock.l_type = F_UNLCK;
                 if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)

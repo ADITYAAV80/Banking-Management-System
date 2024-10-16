@@ -5,6 +5,7 @@
 #include "../functions/server_const.h"
 #include "../common/login/login_cu.h"
 #include "../struct/struct_customer.h"
+#include "../struct/struct_loan.h"
 // #include "../struct/struct_transaction.h"
 #include "../struct/struct_feedback.h"
 
@@ -44,9 +45,25 @@ bool customer_portal(int connectionFileDescriptor)
 
     if (is_user_logged_in(customer_id) != 0)
     {
-        return 0;
-    }
+        bzero(readBuffer, sizeof(readBuffer));
+        bzero(writeBuffer, sizeof(writeBuffer));
 
+        strcpy(writeBuffer, MULTIPLE_LOGIN);
+        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+        if (writeBytes == -1)
+        {
+            perror("Error in writing\n");
+            return false;
+        }
+
+        readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+        if (readBytes == -1)
+        {
+            perror("Error in reading\n");
+            return false;
+        }
+        return false;
+    }
     bzero(readBuffer, sizeof(readBuffer));
 
     bzero(writeBuffer, sizeof(writeBuffer));
@@ -126,8 +143,10 @@ bool customer_portal(int connectionFileDescriptor)
                 view_transaction_history(connectionFileDescriptor, customer_id);
                 break;
             case 9:
+                logout_user(customer_id);
                 return true;
             default:
+                logout_user(customer_id);
                 return true;
             }
         }
@@ -224,7 +243,131 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id) {}
 
 bool transfer_funds(int connectionFileDescriptor, char *customer_id) {}
 
-bool apply_loan(int connectionFileDescriptor, char *customer_id) {}
+bool apply_loan(int connectionFileDescriptor, char *customer_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+
+    struct loan_struct new_loan, prev_loan;
+
+    int LoanFileDescriptor = open("LOAN_FILE", O_RDONLY);
+    if (LoanFileDescriptor == -1 && errno == ENOENT)
+    {
+        new_loan.ln_no = 1;
+    }
+
+    else if (LoanFileDescriptor == -1)
+    {
+        perror("Error while opening loan file");
+        return false;
+    }
+
+    else
+    {
+        int offset = lseek(LoanFileDescriptor, -sizeof(struct loan_struct), SEEK_END);
+        if (offset == -1)
+        {
+            perror("Error seeking to last loan record!");
+            return false;
+        }
+
+        struct flock lock = {F_RDLCK, SEEK_SET, offset, sizeof(struct loan_struct), getpid()};
+        int lockingStatus = fcntl(LoanFileDescriptor, F_SETLKW, &lock);
+        if (lockingStatus == -1)
+        {
+            perror("Error obtaining read lock on EMPLOYEE record!");
+            return false;
+        }
+
+        readBytes = read(LoanFileDescriptor, &prev_loan, sizeof(struct loan_struct));
+        if (readBytes == -1)
+        {
+            perror("Error while reading EMPLOYEE record from file");
+            return false;
+        }
+
+        lock.l_type = F_UNLCK;
+        fcntl(LoanFileDescriptor, F_SETLK, &lock);
+
+        close(LoanFileDescriptor);
+
+        new_loan.ln_no = prev_loan.ln_no + 1;
+    }
+    close(LoanFileDescriptor);
+
+    // for name of application
+    strcpy(new_loan.customer_id, customer_id);
+
+    writeBytes = write(connectionFileDescriptor, LOAN_AMOUNT, strlen(LOAN_AMOUNT));
+    if (writeBytes == -1)
+    {
+        perror("Error writing LOAN_AMOUNT message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
+    {
+        perror("Error reading LOAN_AMOUNT");
+        return false;
+    }
+    new_loan.amount = atoi(readBuffer);
+
+    // Make Loan not approved from the beginning
+    new_loan.approved = false;
+
+    LoanFileDescriptor = open("LOAN_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
+    if (LoanFileDescriptor == -1)
+    {
+        perror("Error while creating / opening EMPLOYEE file!");
+        return false;
+    }
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_WRLCK;    // Write lock
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_start = 0;         // Offset 0
+    lock.l_len = 0;           // Lock the entire file
+
+    // Try to acquire the lock in blocking mode
+    if (fcntl(LoanFileDescriptor, F_SETLKW, &lock) == -1)
+    {
+        perror("Error locking the file");
+        close(LoanFileDescriptor);
+        exit(EXIT_FAILURE);
+    }
+
+    // writing the EMPLOYEEs data into the file
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(LoanFileDescriptor, &new_loan, sizeof(struct loan_struct));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing LOAN record to file!");
+        return false;
+    }
+    // releasing the lock
+    lock.l_type = F_UNLCK;
+    if (fcntl(LoanFileDescriptor, F_SETLK, &lock) == -1)
+    {
+        perror("Error releasing the lock");
+    }
+    close(LoanFileDescriptor);
+
+    // writing a message for add confirmation
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, LOAN_ADDED, strlen(LOAN_ADDED));
+    if (writeBytes == -1)
+    {
+        perror("Error writing message");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    printf("%s", readBuffer);
+    return true;
+}
 
 bool change_password_customer(int connectionFileDescriptor, char *customer_id)
 {
@@ -279,15 +422,12 @@ bool change_password_customer(int connectionFileDescriptor, char *customer_id)
             close(customerFileDescriptor);
             strcpy(writeBuffer, UPDATED);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, readBuffer, strlen(readBuffer));
             break;
         }
     }
     return true;
 }
-/*
-bool add_feedback(int connectionFileDescriptor, char *customer_id) {}
-*/
 
 bool add_feedback(int connectionFileDescriptor, char *customer_id)
 {

@@ -6,12 +6,12 @@
 #include "../common/login/login_em.h"
 #include "../struct/struct_customer.h"
 #include "../struct/struct_employee.h"
+#include "../struct/struct_loan.h"
 
 bool add_customer_employee(int connectionFileDescriptor);
 bool modify_customer_employee(int connectionFileDescriptor);
-bool process_loan_applications(int connectionFileDescriptor);
-bool approve_reject_loans(int connectionFileDescriptor);
-bool view_assigned_loan_applications(int connectionFileDescriptor);
+bool approve_reject_loans(int connectionFileDescriptor, char *employee_id);
+bool view_assigned_loan_applications(int connectionFileDescriptor, char *employee_id);
 bool view_customer_transactions(int connectionFileDescriptor);
 bool change_password_employee(int connectionFileDescriptor, char *employee_id);
 
@@ -39,6 +39,28 @@ bool employee_portal(int connectionFileDescriptor)
 
     char employee_id[20];
     strcpy(employee_id, readBuffer);
+
+    if (is_user_logged_in(employee_id) != 0)
+    {
+        bzero(readBuffer, sizeof(readBuffer));
+        bzero(writeBuffer, sizeof(writeBuffer));
+
+        strcpy(writeBuffer, MULTIPLE_LOGIN);
+        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+        if (writeBytes == -1)
+        {
+            perror("Error in writing\n");
+            return false;
+        }
+
+        readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+        if (readBytes == -1)
+        {
+            perror("Error in reading\n");
+            return false;
+        }
+        return false;
+    }
 
     bzero(readBuffer, sizeof(readBuffer));
 
@@ -101,20 +123,22 @@ bool employee_portal(int connectionFileDescriptor)
                 modify_customer_employee(connectionFileDescriptor);
                 break;
             case 3:
-                view_assigned_loan_applications(connectionFileDescriptor);
+                view_assigned_loan_applications(connectionFileDescriptor, employee_id);
                 break;
             case 4:
-                approve_reject_loans(connectionFileDescriptor);
+                approve_reject_loans(connectionFileDescriptor, employee_id);
                 break;
             case 5:
                 view_customer_transactions(connectionFileDescriptor);
                 break;
             case 6:
-                change_password_employee(connectionFileDescriptor,employee_id);
+                change_password_employee(connectionFileDescriptor, employee_id);
                 break;
             case 7:
+                logout_user(employee_id);
                 return true;
             default:
+                logout_user(employee_id);
                 return true;
             }
         }
@@ -126,7 +150,8 @@ bool employee_portal(int connectionFileDescriptor)
     return true;
 }
 
-bool add_customer_employee(int connectionFileDescriptor){
+bool add_customer_employee(int connectionFileDescriptor)
+{
     ssize_t readBytes, writeBytes;
     char readBuffer[1000], writeBuffer[1000];
 
@@ -316,7 +341,9 @@ bool add_customer_employee(int connectionFileDescriptor){
     printf("%s", readBuffer);
     return true;
 }
-bool modify_customer_employee(int connectionFileDescriptor){
+
+bool modify_customer_employee(int connectionFileDescriptor)
+{
     ssize_t readBytes, writeBytes;
     char readBuffer[1000], writeBuffer[1000];
     // opening the file in Read Write Mode
@@ -467,13 +494,159 @@ bool modify_customer_employee(int connectionFileDescriptor){
     readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     return true;
 }
-bool process_loan_applications(int connectionFileDescriptor){}
 
-bool approve_reject_loans(int connectionFileDescriptor){}
+bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+    int loanFileDescriptor = open("LOAN_FILE", O_RDWR, 0777);
+    if (loanFileDescriptor == -1)
+    {
+        perror("Error while opening loan file");
+        return false;
+    }
 
-bool view_assigned_loan_applications(int connectionFileDescriptor){}
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_RDLCK;    // Read lock
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_start = 0;         // Offset 0
+    lock.l_len = 0;           // Lock the entire file
 
-bool view_customer_transactions(int connectionFileDescriptor){}
+    // Try to acquire the lock in blocking mode
+    if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
+    {
+        perror("Error locking the file");
+        close(loanFileDescriptor);
+        exit(EXIT_FAILURE);
+    }
+    struct loan_struct loan1;
+    char LoanList[1000];
+    LoanList[0] = '\0';
+
+    // getting all the loans ID to choose from
+    while (read(loanFileDescriptor, &loan1, sizeof(struct loan_struct)) == sizeof(struct loan_struct))
+    {
+        if (strcmp(loan1.employee_id, employee_id) == 0)
+        {
+            char tempBuffer[1000]; // Temporary buffer to construct the string
+            sprintf(tempBuffer, "Loan no: %d ", loan1.ln_no);
+            strcat(LoanList, tempBuffer);
+            sprintf(tempBuffer, "Customer: %s ", loan1.customer_id);
+            strcat(LoanList, tempBuffer);
+            sprintf(tempBuffer, "Amount: %d ", loan1.amount);
+            strcat(LoanList, tempBuffer);
+            if (loan1.approved == 0)
+            {
+                strcat(LoanList, "Status: Rejected ");
+            }
+            else
+                strcat(LoanList, "Status: Accepted ");
+            strcat(LoanList, "\n");
+        }
+    }
+    lseek(loanFileDescriptor, 0, SEEK_SET);
+
+    strcpy(writeBuffer, LoanList);
+    strcat(writeBuffer, "Select one of the loans\n");
+
+    bzero(LoanList, sizeof(LoanList));
+    LoanList[0] = '\0';
+
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing to file!");
+        return false;
+    }
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    int ln_no = atoi(readBuffer);
+
+    // unlocking
+    lock.l_type = F_UNLCK;
+    if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
+    {
+        perror("Error releasing the lock");
+    }
+
+    return true;
+}
+
+bool view_assigned_loan_applications(int connectionFileDescriptor, char *employee_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+    int loanFileDescriptor = open("LOAN_FILE", O_RDWR, 0777);
+    if (loanFileDescriptor == -1)
+    {
+        perror("Error while opening loan file");
+        return false;
+    }
+
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_RDLCK;    // Read lock
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_start = 0;         // Offset 0
+    lock.l_len = 0;           // Lock the entire file
+
+    // Try to acquire the lock in blocking mode
+    if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
+    {
+        perror("Error locking the file");
+        close(loanFileDescriptor);
+        exit(EXIT_FAILURE);
+    }
+    struct loan_struct loan1;
+    char LoanList[1000];
+    LoanList[0] = '\0';
+
+    // getting all the loans ID to choose from
+    while (read(loanFileDescriptor, &loan1, sizeof(struct loan_struct)) == sizeof(struct loan_struct))
+    {
+        if (strcmp(loan1.employee_id, employee_id) == 0)
+        {
+            char tempBuffer[1000]; // Temporary buffer to construct the string
+            sprintf(tempBuffer, "Loan no: %d ", loan1.ln_no);
+            strcat(LoanList, tempBuffer);
+            sprintf(tempBuffer, "Customer: %s ", loan1.customer_id);
+            strcat(LoanList, tempBuffer);
+            sprintf(tempBuffer, "Amount: %d ", loan1.amount);
+            strcat(LoanList, tempBuffer);
+            if (loan1.approved == 0)
+            {
+                strcat(LoanList, "Status: Rejected ");
+            }
+            else
+                strcat(LoanList, "Status: Accepted ");
+            strcat(LoanList, "\n");
+        }
+    }
+    lseek(loanFileDescriptor, 0, SEEK_SET);
+
+    strcpy(writeBuffer, LoanList);
+    strcat(writeBuffer, "Press a character followed by enter to exit\n");
+
+    bzero(LoanList, sizeof(LoanList));
+    LoanList[0] = '\0';
+
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing to file!");
+        return false;
+    }
+    readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    // unlocking
+    lock.l_type = F_UNLCK;
+    if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
+    {
+        perror("Error releasing the lock");
+    }
+    return true;
+}
+
+bool view_customer_transactions(int connectionFileDescriptor) {}
 
 bool change_password_employee(int connectionFileDescriptor, char *employee_id)
 {
@@ -534,6 +707,5 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
     }
     return true;
 }
-
 
 #endif

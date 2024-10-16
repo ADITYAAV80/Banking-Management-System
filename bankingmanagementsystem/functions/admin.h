@@ -24,7 +24,8 @@ bool add_customer_admin(int connectionFileDescriptor);
 bool modify_customer_admin(int connectionFileDescriptor);
 bool view_customer_details(int connectionFileDescriptor);
 
-bool change_password_admin(int connectionFileDescriptor);
+bool change_password_admin(int connectionFileDescriptor, char *admin_id);
+bool add_admin(int connectionFileDescriptor);
 
 bool admin_portal(int connectionFileDescriptor)
 {
@@ -33,7 +34,7 @@ bool admin_portal(int connectionFileDescriptor)
     char readBuffer[1000], writeBuffer[1000];
     char tempBuffer[1000];
 
-    strcpy(writeBuffer, S_CUSTOMER_LOGIN_WELCOME);
+    strcpy(writeBuffer, S_ADMIN_LOGIN_WELCOME);
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     if (writeBytes == -1)
     {
@@ -48,18 +49,35 @@ bool admin_portal(int connectionFileDescriptor)
         return false;
     }
 
-    char customer_id[20];
-    strcpy(customer_id, readBuffer);
+    char admin_id[20];
+    strcpy(admin_id, readBuffer);
 
-    if (is_user_logged_in(customer_id) != 0)
+    if (is_user_logged_in(admin_id) != 0)
     {
-        return 0;
+        bzero(readBuffer, sizeof(readBuffer));
+        bzero(writeBuffer, sizeof(writeBuffer));
+
+        strcpy(writeBuffer, MULTIPLE_LOGIN);
+        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+        if (writeBytes == -1)
+        {
+            perror("Error in writing\n");
+            return false;
+        }
+
+        readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+        if (readBytes == -1)
+        {
+            perror("Error in reading\n");
+            return false;
+        }
+        return false;
     }
 
     bzero(readBuffer, sizeof(readBuffer));
 
     bzero(writeBuffer, sizeof(writeBuffer));
-    strcpy(writeBuffer, S_CUSTOMER_PASSWORD);
+    strcpy(writeBuffer, S_ADMIN_PASSWORD);
 
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     if (writeBytes == -1)
@@ -77,39 +95,37 @@ bool admin_portal(int connectionFileDescriptor)
     strcpy(pass_buffer, readBuffer);
 
     // Debug
-    // printf("%s", customer_id);
+    // printf("%s", admin_id);
     // printf("%s", pass_buffer);
-    if (login_admin(connectionFileDescriptor))
+
+    bzero(writeBuffer, sizeof(writeBuffer));
+    if (login_admin(connectionFileDescriptor, admin_id, pass_buffer))
     {
-        ssize_t writeBytes, readBytes;
-        char readBuffer[1000], writeBuffer[1000];
-        int choice;
+        bzero(readBuffer, sizeof(readBuffer));
+        bzero(writeBuffer, sizeof(writeBuffer));
+        strcpy(writeBuffer, S_ADMIN_LOGIN_SUCCESS);
         while (1)
         {
-            // Send the Admin menu to the client
-            bzero(writeBuffer, sizeof(writeBuffer));
-            strcpy(writeBuffer, ADMIN_MENU);
+            strcat(writeBuffer, "\n");
+            strcat(writeBuffer, S_ADMIN_MENU);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             if (writeBytes == -1)
             {
-                perror("Error while writing ADMIN_MENU to client!");
+                perror("Error while writing to client!");
                 return false;
             }
+            bzero(writeBuffer, sizeof(writeBuffer));
 
-            // Read the user's choice from the client
-            bzero(readBuffer, sizeof(readBuffer));
             readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
             if (readBytes == -1)
             {
                 perror("Error while reading client's choice for ADMIN_MENU");
                 return false;
             }
-
-            // Convert the user's input to an integer choice
-            choice = atoi(readBuffer);
+            // all the admin options
+            int choice = atoi(readBuffer);
             printf("Choice received: %d\n", choice);
 
-            // Process the admin's choice
             switch (choice)
             {
             case 1:
@@ -131,7 +147,7 @@ bool admin_portal(int connectionFileDescriptor)
                 modify_customer_admin(connectionFileDescriptor);
                 break;
             case 7:
-                change_password_admin(connectionFileDescriptor);
+                add_admin(connectionFileDescriptor);
                 break;
             case 8:
                 view_employee_details(connectionFileDescriptor);
@@ -143,10 +159,13 @@ bool admin_portal(int connectionFileDescriptor)
                 view_customer_details(connectionFileDescriptor);
                 break;
             case 11:
-                logout_user("admin");
+                change_password_admin(connectionFileDescriptor, admin_id);
+                break;
+            case 12:
+                logout_user(admin_id);
                 return true; // Exit from the admin portal
             default:
-                logout_user("admin");
+                logout_user(admin_id);
                 return true;
             }
         }
@@ -1555,9 +1574,255 @@ bool view_customer_details(int connectionFileDescriptor)
     bzero(readBuffer, sizeof(readBuffer));
     return false;
 }
-bool change_password_admin(int connectionFileDescriptor)
+
+bool add_admin(int connectionFileDescriptor)
 {
-    printf("Change password");
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+
+    struct admin_struct new_admin, prev_admin;
+    // for Admin's emp no given in FCFS format
+
+    int AdminFileDescriptor = open("ADMIN_FILE", O_RDONLY);
+    if (AdminFileDescriptor == -1 && errno == ENOENT)
+    {
+        //  admin.txt was never created
+        new_admin.ad_no = 1;
+    }
+
+    else if (AdminFileDescriptor == -1)
+    {
+        perror("Error while opening admin file");
+        return false;
+    }
+
+    else
+    {
+        int offset = lseek(AdminFileDescriptor, -sizeof(struct admin_struct), SEEK_END);
+        if (offset == -1)
+        {
+            perror("Error seeking to last admin record!");
+            return false;
+        }
+
+        struct flock lock = {F_RDLCK, SEEK_SET, offset, sizeof(struct admin_struct), getpid()};
+        int lockingStatus = fcntl(AdminFileDescriptor, F_SETLKW, &lock);
+        if (lockingStatus == -1)
+        {
+            perror("Error obtaining read lock on ADMIN record!");
+            return false;
+        }
+
+        readBytes = read(AdminFileDescriptor, &prev_admin, sizeof(struct admin_struct));
+        if (readBytes == -1)
+        {
+            perror("Error while reading ADMIN record from file");
+            return false;
+        }
+
+        lock.l_type = F_UNLCK;
+        fcntl(AdminFileDescriptor, F_SETLK, &lock);
+
+        close(AdminFileDescriptor);
+
+        new_admin.ad_no = prev_admin.ad_no + 1;
+    }
+    close(AdminFileDescriptor);
+
+    // for admin name
+    writeBytes = write(connectionFileDescriptor, ADMIN_NAME, strlen(ADMIN_NAME));
+    if (writeBytes == -1)
+    {
+        perror("Error writing ADMIN_NAME message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
+    {
+        perror("Error reading ADMIN name");
+        return false;
+    }
+
+    strcpy(new_admin.name, readBuffer);
+
+    // for ADMINs age
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, ADMIN_AGE, strlen(ADMIN_AGE));
+    if (writeBytes == -1)
+    {
+        perror("Error writing ADMIN_AGE message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    strcpy(new_admin.age, readBuffer);
+
+    // for ADMINs address
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, ADMIN_ADDRESS, strlen(ADMIN_ADDRESS));
+    if (writeBytes == -1)
+    {
+        perror("Error writing ADMIN_ADDRESS message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    strcpy(new_admin.address, readBuffer);
+
+    // for ADMINs email
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, ADMIN_EMAIL, strlen(ADMIN_EMAIL));
+    if (writeBytes == -1)
+    {
+        perror("Error writing ADMIN_EMAIL message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    strcpy(new_admin.email, readBuffer);
+
+    // for ADMINs login
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, ADMIN_LOGIN, strlen(ADMIN_LOGIN));
+    if (writeBytes == -1)
+    {
+        perror("Error writing ADMIN_LOGIN message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    strcpy(new_admin.login, readBuffer);
+
+    // for ADMINs password
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, ADMIN_PASSWORD, strlen(ADMIN_PASSWORD));
+    if (writeBytes == -1)
+    {
+        perror("Error writing ADMIN_PASSWORD message to client!");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    strcpy(new_admin.password, readBuffer);
+
+    // make ADMIN active from the beginning
+    new_admin.active = true;
+
+    AdminFileDescriptor = open("ADMIN_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
+    if (AdminFileDescriptor == -1)
+    {
+        perror("Error while creating / opening ADMIN file!");
+        return false;
+    }
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_WRLCK;    // Write lock
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_start = 0;         // Offset 0
+    lock.l_len = 0;           // Lock the entire file
+
+    // Try to acquire the lock in blocking mode
+    if (fcntl(AdminFileDescriptor, F_SETLKW, &lock) == -1)
+    {
+        perror("Error locking the file");
+        close(AdminFileDescriptor);
+        exit(EXIT_FAILURE);
+    }
+    // writing the ADMINs data into the file
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(AdminFileDescriptor, &new_admin, sizeof(struct admin_struct));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing ADMIN record to file!");
+        return false;
+    }
+    // releasing the lock
+    lock.l_type = F_UNLCK;
+    if (fcntl(AdminFileDescriptor, F_SETLK, &lock) == -1)
+    {
+        perror("Error releasing the lock");
+    }
+    close(AdminFileDescriptor);
+
+    // writing a message for add confirmation
+    bzero(writeBuffer, sizeof(writeBuffer));
+    writeBytes = write(connectionFileDescriptor, ADMIN_ADDED, strlen(ADMIN_ADDED));
+    if (writeBytes == -1)
+    {
+        perror("Error writing message");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    printf("%s", readBuffer);
+    return true;
+}
+
+bool change_password_admin(int connectionFileDescriptor, char *admin_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+    int adminFileDescriptor = open("ADMIN_FILE", O_RDWR, 0777);
+    if (adminFileDescriptor == -1)
+    {
+        perror("Error while opening file");
+        return false;
+    }
+
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_WRLCK;    // Write lock
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_start = 0;         // Offset 0
+    lock.l_len = 0;           // Lock the entire file
+
+    // Try to acquire the lock in blocking mode
+    if (fcntl(adminFileDescriptor, F_SETLKW, &lock) == -1)
+    {
+        perror("Error locking the file");
+        close(adminFileDescriptor);
+        exit(EXIT_FAILURE);
+    }
+
+    struct admin_struct admin1;
+    while (read(adminFileDescriptor, &admin1, sizeof(struct admin_struct)) == sizeof(struct admin_struct))
+    {
+        if (strcmp(admin1.login, admin_id) == 0)
+        {
+            lseek(adminFileDescriptor, -1 * sizeof(struct admin_struct), SEEK_CUR);
+            // to update password
+            bzero(writeBuffer, sizeof(writeBuffer));
+            bzero(readBuffer, sizeof(readBuffer));
+
+            strcpy(writeBuffer, S_ADMIN_CHANGE_PASSWORD);
+
+            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+
+            strcpy(admin1.password, readBuffer);
+
+            write(adminFileDescriptor, &admin1, sizeof(struct admin_struct));
+
+            lock.l_type = F_UNLCK; // to unlock file
+            if (fcntl(adminFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error releasing the lock");
+            }
+            close(adminFileDescriptor);
+            strcpy(writeBuffer, UPDATED);
+            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            break;
+        }
+    }
     return true;
 }
 
