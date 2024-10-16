@@ -16,6 +16,7 @@
 #include "login_common.h"
 
 bool login_customer(int connectionFileDescriptor, char *customer_id, char *passBuffer);
+
 bool customer_password_checker(char *customer_id, char *passBuffer);
 
 bool login_customer(int connectionFileDescriptor, char *customer_id, char *passBuffer)
@@ -29,6 +30,7 @@ bool login_customer(int connectionFileDescriptor, char *customer_id, char *passB
 
 bool customer_password_checker(char *login_id, char *password)
 {
+
     int fileDescriptor = open("CUSTOMER_FILE", O_RDONLY);
 
     if (fileDescriptor == -1)
@@ -60,6 +62,9 @@ bool customer_password_checker(char *login_id, char *password)
             if (strcmp(customer.password, password) == 0)
             {
                 printf("Password match\n");
+                add_user(login_id);
+                print_logged_in_users();
+
                 // unlocking
                 lock.l_type = F_UNLCK;
                 if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)

@@ -8,6 +8,7 @@
 #include "../struct/struct_customer.h"
 
 #include "../functions/server_const.h"
+#include "../common/login/login_common.h"
 
 bool admin_portal(int connectionFileDescriptor);
 
@@ -25,58 +26,59 @@ bool view_customer_details(int connectionFileDescriptor);
 
 bool change_password_admin(int connectionFileDescriptor);
 
-/*
 bool admin_portal(int connectionFileDescriptor)
 {
-    if (login_admin(connectionFileDescriptor))
+    // creating read and write buffer
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+    char tempBuffer[1000];
+
+    strcpy(writeBuffer, S_CUSTOMER_LOGIN_WELCOME);
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
     {
-        // Login successful for admin
-        ssize_t writeBytes, readBytes;            // Number of bytes read from / written to the client
-        char readBuffer[1000], writeBuffer[1000]; // A buffer used for reading & writing to the client
-        bzero(writeBuffer, sizeof(writeBuffer));
-        while (1)
-        {
-
-            bzero(readBuffer, sizeof(readBuffer));
-            bzero(writeBuffer, sizeof(writeBuffer));
-            strcpy(writeBuffer, ADMIN_MENU);
-
-            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            if (writeBytes == -1)
-            {
-                perror("Error while writing ADMIN_MENU to client!");
-                return false;
-            }
-            bzero(writeBuffer, sizeof(writeBuffer));
-
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
-            if (readBytes == -1)
-            {
-                perror("Error while reading client's choice for ADMIN_MENU");
-                return false;
-            }
-            printf("Choice:%s", readBuffer);
-            int choice = atoi(readBuffer);
-            switch (choice)
-            {
-            case 1:
-                // add_employee(connectionFileDescriptor);
-                break;
-            default:
-                printf("Invalid choice. Exiting...\n");
-                return false;
-            }
-        }
+        perror("Error in writing\n");
+        return false;
     }
-    else
+
+    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
     {
-        return false; // admin login failed
+        perror("Error in writing\n");
+        return false;
     }
-    return true;
-}
-*/
-bool admin_portal(int connectionFileDescriptor)
-{
+
+    char customer_id[20];
+    strcpy(customer_id, readBuffer);
+
+    if (is_user_logged_in(customer_id) != 0)
+    {
+        return 0;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+
+    bzero(writeBuffer, sizeof(writeBuffer));
+    strcpy(writeBuffer, S_CUSTOMER_PASSWORD);
+
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error in writing\n");
+        return false;
+    }
+    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
+    {
+        perror("Error in writing\n");
+        return false;
+    }
+    char pass_buffer[20];
+    strcpy(pass_buffer, readBuffer);
+
+    // Debug
+    // printf("%s", customer_id);
+    // printf("%s", pass_buffer);
     if (login_admin(connectionFileDescriptor))
     {
         ssize_t writeBytes, readBytes;
@@ -141,8 +143,10 @@ bool admin_portal(int connectionFileDescriptor)
                 view_customer_details(connectionFileDescriptor);
                 break;
             case 11:
+                logout_user("admin");
                 return true; // Exit from the admin portal
             default:
+                logout_user("admin");
                 return true;
             }
         }

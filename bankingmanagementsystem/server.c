@@ -5,11 +5,13 @@
 #include <unistd.h>		// Import for `fork`, `fcntl`, `read`, `write`, `lseek, `_exit` functions
 #include <sys/types.h>	// Import for `socket`, `bind`, `listen`, `accept`, `fork`, `lseek` functions
 #include <sys/socket.h> // Import for `socket`, `bind`, `listen`, `accept` functions
-#include <netinet/ip.h> // Import for `sockaddr_in` stucture
+#include <netinet/ip.h> // Import for `sockaddr_in` structure
 
 #include <string.h>	 // Import for string functions
 #include <stdbool.h> // Import for `bool` data type
-#include <stdlib.h>	 // Import for `atoi` funtions
+#include <stdlib.h>	 // Import for `atoi` functions
+#include <sys/ipc.h> // Import for IPC keys
+#include <sys/shm.h> // Import for shared memory
 
 #include "functions/server_const.h"
 #include "functions/customer.h"
@@ -17,12 +19,14 @@
 #include "functions/manager.h"
 #include "functions/admin.h"
 
-char logged_in_users[MAX_USERS][USERNAME_LENGTH] = {0};
-int current_user_count = 0;
+// Global variables for user management in shared memory
+char (*shared_logged_in_users)[USERNAME_LENGTH];
+int *shared_current_user_count;
 
 void portal_handler(int connectionFileDescriptor)
 {
 	printf("Connection is made\n");
+
 	char readBuffer[1000], writeBuffer[1000];
 	ssize_t readBytes, writeBytes;
 	int choice;
@@ -75,10 +79,22 @@ void portal_handler(int connectionFileDescriptor)
 	printf("Closing the connection to server\n");
 }
 
-void main()
+int main()
 {
 	int socketFileDescriptor, socketBindStatus, socketListenStatus, connectionFileDescriptor;
 	struct sockaddr_in serverAddress, clientAddress;
+
+	// Create shared memory for logged in users and user count
+	int shmid = shmget(IPC_PRIVATE, sizeof(char[MAX_USERS][USERNAME_LENGTH]) + sizeof(int), IPC_CREAT | 0666);
+	if (shmid == -1)
+	{
+		perror("Error creating shared memory");
+		exit(1);
+	}
+
+	shared_logged_in_users = shmat(shmid, NULL, 0);
+	shared_current_user_count = (int *)(shared_logged_in_users + MAX_USERS);
+	*shared_current_user_count = 0; // Initialize user count
 
 	int option = 1;
 	socketFileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
@@ -88,8 +104,6 @@ void main()
 		perror("Error while creating server socket!");
 		_exit(0);
 	}
-
-	int sockfd;
 
 	serverAddress.sin_family = AF_INET;				   // IPv4
 	serverAddress.sin_port = htons(8080);			   // Server will listen to port 8080
@@ -131,5 +145,7 @@ void main()
 		}
 	}
 	close(socketFileDescriptor);
+	shmdt(shared_logged_in_users); // Detach shared memory
+	shmctl(shmid, IPC_RMID, NULL); // Remove shared memory
 	_exit(0);
 }

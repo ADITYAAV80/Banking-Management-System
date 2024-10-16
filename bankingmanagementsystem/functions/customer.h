@@ -42,6 +42,11 @@ bool customer_portal(int connectionFileDescriptor)
     char customer_id[20];
     strcpy(customer_id, readBuffer);
 
+    if (is_user_logged_in(customer_id) != 0)
+    {
+        return 0;
+    }
+
     bzero(readBuffer, sizeof(readBuffer));
 
     bzero(writeBuffer, sizeof(writeBuffer));
