@@ -38,24 +38,19 @@ bool employee_password_checker(char *login_id, char *password)
 
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_RDLCK;    // Read lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
 
-    // Try to acquire the lock in blocking mode
-    if (fcntl(fileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(fileDescriptor);
-        exit(EXIT_FAILURE);
-    }
     struct employee_struct employee;
 
     while (read(fileDescriptor, &employee, sizeof(struct employee_struct)) == sizeof(struct employee_struct))
     {
         if (strcmp(employee.login, login_id) == 0)
         {
+
+            lock.l_type = F_RDLCK;                       // Read lock
+            lock.l_whence = SEEK_CUR;                    // Start from the beginning of the file
+            lock.l_start = 0;                            // Offset 0
+            lock.l_len = sizeof(struct employee_struct); // Lock the entire file
+
             if (strcmp(employee.password, password) == 0)
             {
                 printf("Password match\n");
@@ -70,13 +65,15 @@ bool employee_password_checker(char *login_id, char *password)
                 close(fileDescriptor);
                 return true;
             }
+            else
+            {
+                lock.l_type = F_UNLCK;
+                if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                {
+                    perror("Error releasing the lock");
+                }
+            }
         }
-    }
-    // unlocking
-    lock.l_type = F_UNLCK;
-    if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
-    {
-        perror("Error releasing the lock");
     }
     close(fileDescriptor);
     return false;

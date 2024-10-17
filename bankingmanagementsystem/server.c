@@ -40,7 +40,7 @@ void portal_handler(int connectionFileDescriptor)
 		else
 		{
 			bzero(readBuffer, sizeof(readBuffer));
-			readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+			readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 			if (readBytes == -1)
 			{
 				perror("Error while reading from client");

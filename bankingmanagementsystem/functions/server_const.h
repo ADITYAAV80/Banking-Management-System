@@ -50,7 +50,7 @@
 #define MANAGER_EMAIL "Update Email for the manager\n"
 #define MANAGER_LOGIN "Update LOGIN ID for the manager\n"
 #define MANAGER_PASSWORD "Update Password for the manager\n"
-#define MANAGER_ADDED "Employee updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
+#define MANAGER_ADDED "Manager updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 #define MANAGER_UPDATE "Enter The LOGIN ID to be updated\n"
 #define MANAGER_DETAILS "Enter the Login ID whose details you want\n"
 
@@ -100,6 +100,9 @@
 #define FEEDBACK_ADDED "Feedback updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 #define LOAN_AMOUNT "Please Enter Loan Amount:\n"
 #define LOAN_ADDED "Loan updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
+#define TRANSACTION_AMOUNT "Please enter money to deposit\n"
+#define TRANSACTION_AMOUNT_W "Please enter money to withdraw\n"
+#define TRANSACTION_ADDED "Transaction updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 
 #include <sys/ipc.h>
 #include <sys/shm.h>

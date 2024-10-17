@@ -30,7 +30,7 @@ bool employee_portal(int connectionFileDescriptor)
         return false;
     }
 
-    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     if (readBytes == -1)
     {
         perror("Error in writing\n");
@@ -53,7 +53,7 @@ bool employee_portal(int connectionFileDescriptor)
             return false;
         }
 
-        readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+        readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
         if (readBytes == -1)
         {
             perror("Error in reading\n");
@@ -73,7 +73,7 @@ bool employee_portal(int connectionFileDescriptor)
         perror("Error in writing\n");
         return false;
     }
-    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     if (readBytes == -1)
     {
         perror("Error in writing\n");
@@ -104,7 +104,7 @@ bool employee_portal(int connectionFileDescriptor)
             }
             bzero(writeBuffer, sizeof(writeBuffer));
 
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
             if (readBytes == -1)
             {
                 perror("Error while reading client's choice for ADMIN_MENU");
@@ -399,7 +399,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
         perror("Error while writing to file!");
         return false;
     }
-    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     char login[20];
 
     strcpy(login, readBuffer);
@@ -416,7 +416,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
             strcpy(writeBuffer, CUSTOMER_NAME);
             strcat(writeBuffer, CHOICE);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
             if (strcmp(readBuffer, "y") == 0)
             {
                 bzero(writeBuffer, sizeof(writeBuffer));
@@ -424,7 +424,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
 
                 strcpy(writeBuffer, UPDATE);
                 writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-                readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+                readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
                 strcpy(customer1.name, readBuffer);
             }
 
@@ -434,7 +434,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
             strcpy(writeBuffer, CUSTOMER_ADDRESS);
             strcat(writeBuffer, CHOICE);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
             if (strcmp(readBuffer, "y") == 0)
             {
                 bzero(writeBuffer, sizeof(writeBuffer));
@@ -442,7 +442,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
 
                 strcpy(writeBuffer, UPDATE);
                 writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-                readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+                readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
                 strcpy(customer1.address, readBuffer);
             }
 
@@ -452,7 +452,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
             strcpy(writeBuffer, CUSTOMER_EMAIL);
             strcat(writeBuffer, CHOICE);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
             if (strcmp(readBuffer, "y") == 0)
             {
                 bzero(writeBuffer, sizeof(writeBuffer));
@@ -460,7 +460,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
 
                 strcpy(writeBuffer, UPDATE);
                 writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-                readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+                readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
                 strcpy(customer1.email, readBuffer);
             }
 
@@ -477,7 +477,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
             close(customerFileDescriptor);
             strcpy(writeBuffer, UPDATED);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
             return true;
         }
     }
@@ -491,7 +491,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
     close(customerFileDescriptor);
     strcpy(writeBuffer, NOT_UPDATED);
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-    readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
     return true;
 }
 
@@ -592,7 +592,7 @@ bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
 
             strcpy(writeBuffer, "Approve/Reject (y/n)");
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
             if (strcmp(readBuffer, "y") == 0)
             {
                 loan1.approved = true;
@@ -616,7 +616,7 @@ bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
             close(loanFileDescriptor);
             strcpy(writeBuffer, UPDATED);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
             return true;
         }
     }
@@ -630,7 +630,7 @@ bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
     close(loanFileDescriptor);
     strcpy(writeBuffer, NOT_UPDATED);
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-    readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
 
     return true;
 }
@@ -699,7 +699,7 @@ bool view_assigned_loan_applications(int connectionFileDescriptor, char *employe
         perror("Error while writing to file!");
         return false;
     }
-    readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
     // unlocking
     lock.l_type = F_UNLCK;
     if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
@@ -750,7 +750,7 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
             strcpy(writeBuffer, S_EMPLOYEE_CHANGE_PASSWORD);
 
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
             strcpy(employee1.password, readBuffer);
 
@@ -764,7 +764,7 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
             close(employeeFileDescriptor);
             strcpy(writeBuffer, UPDATED);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
             break;
         }
     }
