@@ -156,16 +156,16 @@ bool add_customer_employee(int connectionFileDescriptor)
     char readBuffer[1000], writeBuffer[1000];
 
     struct customer_struct new_customer, prev_customer;
-    // for Employee's emp no given in FCFS format
+    // for customer's emp no given in FCFS format
 
-    int EmployeeFileDescriptor = open("CUSTOMER_FILE", O_RDONLY);
-    if (EmployeeFileDescriptor == -1 && errno == ENOENT)
+    int customerFileDescriptor = open("CUSTOMER_FILE", O_RDONLY);
+    if (customerFileDescriptor == -1 && errno == ENOENT)
     {
         //  customer.txt was never created
         new_customer.cus_no = 1;
     }
 
-    else if (EmployeeFileDescriptor == -1)
+    else if (customerFileDescriptor == -1)
     {
         perror("Error while opening customer file");
         return false;
@@ -173,7 +173,7 @@ bool add_customer_employee(int connectionFileDescriptor)
 
     else
     {
-        int offset = lseek(EmployeeFileDescriptor, -sizeof(struct customer_struct), SEEK_END);
+        int offset = lseek(customerFileDescriptor, -sizeof(struct customer_struct), SEEK_END);
         if (offset == -1)
         {
             perror("Error seeking to last customer record!");
@@ -181,28 +181,28 @@ bool add_customer_employee(int connectionFileDescriptor)
         }
 
         struct flock lock = {F_RDLCK, SEEK_SET, offset, sizeof(struct customer_struct), getpid()};
-        int lockingStatus = fcntl(EmployeeFileDescriptor, F_SETLKW, &lock);
+        int lockingStatus = fcntl(customerFileDescriptor, F_SETLKW, &lock);
         if (lockingStatus == -1)
         {
-            perror("Error obtaining read lock on CUSTOMER record!");
+            perror("Error obtaining read lock on customer record!");
             return false;
         }
 
-        readBytes = read(EmployeeFileDescriptor, &prev_customer, sizeof(struct customer_struct));
+        readBytes = read(customerFileDescriptor, &prev_customer, sizeof(struct customer_struct));
         if (readBytes == -1)
         {
-            perror("Error while reading CUSTOMER record from file");
+            perror("Error while reading customer record from file");
             return false;
         }
 
         lock.l_type = F_UNLCK;
-        fcntl(EmployeeFileDescriptor, F_SETLK, &lock);
+        fcntl(customerFileDescriptor, F_SETLK, &lock);
 
-        close(EmployeeFileDescriptor);
+        close(customerFileDescriptor);
 
         new_customer.cus_no = prev_customer.cus_no + 1;
     }
-    close(EmployeeFileDescriptor);
+    close(customerFileDescriptor);
 
     // for customer name
     writeBytes = write(connectionFileDescriptor, CUSTOMER_NAME, strlen(CUSTOMER_NAME));
@@ -216,13 +216,13 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     if (readBytes == -1)
     {
-        perror("Error reading CUSTOMER name");
+        perror("Error reading customer name");
         return false;
     }
 
     strcpy(new_customer.name, readBuffer);
 
-    // for CUSTOMERs age
+    // for customers age
     bzero(writeBuffer, sizeof(writeBuffer));
     writeBytes = write(connectionFileDescriptor, CUSTOMER_AGE, strlen(CUSTOMER_AGE));
     if (writeBytes == -1)
@@ -235,7 +235,7 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     strcpy(new_customer.age, readBuffer);
 
-    // for CUSTOMERs address
+    // for customers address
     bzero(writeBuffer, sizeof(writeBuffer));
     writeBytes = write(connectionFileDescriptor, CUSTOMER_ADDRESS, strlen(CUSTOMER_ADDRESS));
     if (writeBytes == -1)
@@ -248,7 +248,7 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     strcpy(new_customer.address, readBuffer);
 
-    // for CUSTOMERs email
+    // for customers email
     bzero(writeBuffer, sizeof(writeBuffer));
     writeBytes = write(connectionFileDescriptor, CUSTOMER_EMAIL, strlen(CUSTOMER_EMAIL));
     if (writeBytes == -1)
@@ -261,7 +261,7 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     strcpy(new_customer.email, readBuffer);
 
-    // for CUSTOMERs login
+    // for customers login
     bzero(writeBuffer, sizeof(writeBuffer));
     writeBytes = write(connectionFileDescriptor, CUSTOMER_LOGIN, strlen(CUSTOMER_LOGIN));
     if (writeBytes == -1)
@@ -274,7 +274,7 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     strcpy(new_customer.login, readBuffer);
 
-    // for CUSTOMERs password
+    // for customers password
     bzero(writeBuffer, sizeof(writeBuffer));
     writeBytes = write(connectionFileDescriptor, CUSTOMER_PASSWORD, strlen(CUSTOMER_PASSWORD));
     if (writeBytes == -1)
@@ -287,45 +287,44 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     strcpy(new_customer.password, readBuffer);
 
-    // make CUSTOMER active from the beginning
+    // make customer active from the beginning
     new_customer.active = true;
-    new_customer.balance = 0;
 
-    EmployeeFileDescriptor = open("CUSTOMER_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
-    if (EmployeeFileDescriptor == -1)
+    customerFileDescriptor = open("CUSTOMER_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
+    if (customerFileDescriptor == -1)
     {
-        perror("Error while creating / opening CUSTOMER file!");
+        perror("Error while creating / opening customer file!");
         return false;
     }
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
     lock.l_type = F_WRLCK;    // Write lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
+    lock.l_whence = SEEK_END; // Start from the beginning of the file
     lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
+    lock.l_len = sizeof(struct customer_struct);
 
     // Try to acquire the lock in blocking mode
-    if (fcntl(EmployeeFileDescriptor, F_SETLKW, &lock) == -1)
+    if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
     {
         perror("Error locking the file");
-        close(EmployeeFileDescriptor);
+        close(customerFileDescriptor);
         exit(EXIT_FAILURE);
     }
-    // writing the CUSTOMERs data into the file
+    // writing the customers data into the file
     bzero(writeBuffer, sizeof(writeBuffer));
-    writeBytes = write(EmployeeFileDescriptor, &new_customer, sizeof(struct customer_struct));
+    writeBytes = write(customerFileDescriptor, &new_customer, sizeof(struct customer_struct));
     if (writeBytes == -1)
     {
-        perror("Error while writing CUSTOMER record to file!");
+        perror("Error while writing customer record to file!");
         return false;
     }
     // releasing the lock
     lock.l_type = F_UNLCK;
-    if (fcntl(EmployeeFileDescriptor, F_SETLK, &lock) == -1)
+    if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
     {
         perror("Error releasing the lock");
     }
-    close(EmployeeFileDescriptor);
+    close(customerFileDescriptor);
 
     // writing a message for add confirmation
     bzero(writeBuffer, sizeof(writeBuffer));
@@ -354,44 +353,59 @@ bool modify_customer_employee(int connectionFileDescriptor)
         return false;
     }
 
-    // write lock
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_WRLCK;    // Write lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
 
-    // Try to acquire the lock in blocking mode
-    if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(customerFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
     struct customer_struct customer1, customer;
-    char EmployeeList[1000];
-    EmployeeList[0] = '\0';
+    char customerlist[1000];
+    customerlist[0] = '\0';
+
     // giving all the customer id to be modified as choice
     while (read(customerFileDescriptor, &customer1, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
     {
         if (customer1.active == 1)
         {
+            lock.l_type = F_RDLCK;
+            lock.l_whence = SEEK_CUR;
+            lock.l_start = -sizeof(struct customer_struct);
+            lock.l_len = sizeof(struct customer_struct);
+
+            // Try to acquire the lock in blocking mode
+            if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(customerFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
+
             char tempBuffer[1000]; // Temporary buffer to construct the string
             sprintf(tempBuffer, "Login ID : %s", customer1.login);
-            strcat(EmployeeList, tempBuffer);
+            strcat(customerlist, tempBuffer);
             sprintf(tempBuffer, "\tName : %s ", customer1.name);
-            strcat(EmployeeList, tempBuffer);
-            strcat(EmployeeList, "\n");
+            strcat(customerlist, tempBuffer);
+            strcat(customerlist, "\n");
+
+            lock.l_type = F_UNLCK;
+            if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error releasing the lock");
+            }
+
+            // Unlock the current customer record after reading
+            lock.l_type = F_UNLCK; // Unlock
+            if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error unlocking the customer record");
+            }
         }
     }
     lseek(customerFileDescriptor, 0, SEEK_SET);
 
-    strcpy(writeBuffer, EmployeeList);
+    strcpy(writeBuffer, customerlist);
     strcat(writeBuffer, CUSTOMER_UPDATE);
 
-    bzero(EmployeeList, sizeof(EmployeeList));
-    EmployeeList[0] = '\0';
+    bzero(customerlist, sizeof(customerlist));
+    customerlist[0] = '\0';
 
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     if (writeBytes == -1)
@@ -408,6 +422,7 @@ bool modify_customer_employee(int connectionFileDescriptor)
     {
         if (strcmp(customer1.login, login) == 0)
         {
+
             lseek(customerFileDescriptor, -1 * sizeof(struct customer_struct), SEEK_CUR);
             // to update name
             bzero(writeBuffer, sizeof(writeBuffer));
@@ -467,7 +482,19 @@ bool modify_customer_employee(int connectionFileDescriptor)
             bzero(writeBuffer, sizeof(writeBuffer));
             bzero(readBuffer, sizeof(readBuffer));
 
-            write(customerFileDescriptor, &customer1, sizeof(struct customer_struct));
+            lock.l_type = F_WRLCK;
+            lock.l_whence = SEEK_CUR;
+            lock.l_start = 0;
+            lock.l_len = sizeof(struct customer_struct);
+
+            // Try to acquire the lock in blocking mode
+            if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(customerFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
+            writeBytes = write(customerFileDescriptor, &customer1, sizeof(struct customer_struct));
             // unlocking
             lock.l_type = F_UNLCK;
             if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
@@ -477,16 +504,9 @@ bool modify_customer_employee(int connectionFileDescriptor)
             close(customerFileDescriptor);
             strcpy(writeBuffer, UPDATED);
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
+            readBytes = read(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             return true;
         }
-    }
-    // if ID not found
-    //  unlocking
-    lock.l_type = F_UNLCK;
-    if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
-    {
-        perror("Error releasing the lock");
     }
     close(customerFileDescriptor);
     strcpy(writeBuffer, NOT_UPDATED);
@@ -508,28 +528,31 @@ bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
 
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_RDLCK;    // Read lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
 
-    // Try to acquire the lock in blocking mode
-    if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(loanFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
     struct loan_struct loan1;
     char LoanList[1000];
-    LoanList[0] = '\0';
+    LoanList[0] = '\0'; // Initialize LoanList as an empty string
 
-    // getting all the loans ID to choose from
+    // Get all the loan IDs to choose from
     while (read(loanFileDescriptor, &loan1, sizeof(struct loan_struct)) == sizeof(struct loan_struct))
     {
         if (strcmp(loan1.employee_id, employee_id) == 0)
         {
-            char tempBuffer[1000]; // Temporary buffer to construct the string
+            // Lock the current record
+            lock.l_type = F_RDLCK;
+            lock.l_whence = SEEK_CUR;
+            lock.l_start = -sizeof(struct loan_struct);
+            lock.l_len = sizeof(struct loan_struct);
+
+            if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(loanFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
+
+            // Append loan details to LoanList
+            char tempBuffer[1000];
             sprintf(tempBuffer, "Loan no: %d ", loan1.ln_no);
             strcat(LoanList, tempBuffer);
             sprintf(tempBuffer, "Customer: %s ", loan1.customer_id);
@@ -541,58 +564,77 @@ bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
                 strcat(LoanList, "Status: Rejected ");
             }
             else
+            {
                 strcat(LoanList, "Status: Accepted ");
+            }
             strcat(LoanList, "\n");
+
+            // Unlock the current record after reading
+            lock.l_type = F_UNLCK;
+            if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error releasing the lock");
+            }
         }
     }
+
+    // Reset file descriptor to the beginning of the file
     lseek(loanFileDescriptor, 0, SEEK_SET);
 
+    // Send the list of loans to the client
     strcpy(writeBuffer, LoanList);
     strcat(writeBuffer, "Select one of the loans\n");
 
+    // Clear the LoanList buffer after use
     bzero(LoanList, sizeof(LoanList));
-    LoanList[0] = '\0';
 
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     if (writeBytes == -1)
     {
-        perror("Error while writing to file!");
+        perror("Error while writing to client!");
+        close(loanFileDescriptor);
         return false;
     }
-    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+
+    // Clear the read buffer before reading input
+    bzero(readBuffer, sizeof(readBuffer));
+
+    // Read the loan number from the client
+    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer) - 1);
     int ln_no = atoi(readBuffer);
 
-    // unlocking
-    lock.l_type = F_UNLCK;
-    if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
-    {
-        perror("Error releasing the lock");
-    }
-    memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_WRLCK;    // Write lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;
-
-    if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(loanFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
-
+    // Reset file pointer for loan details
     while (read(loanFileDescriptor, &loan1, sizeof(struct loan_struct)) == sizeof(struct loan_struct))
     {
         if (loan1.ln_no == ln_no)
         {
             lseek(loanFileDescriptor, -1 * sizeof(struct loan_struct), SEEK_CUR);
 
+            // Clear buffers before next operation
             bzero(writeBuffer, sizeof(writeBuffer));
             bzero(readBuffer, sizeof(readBuffer));
 
+            // Ask the client to approve/reject
             strcpy(writeBuffer, "Approve/Reject (y/n)");
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+            if (writeBytes == -1)
+            {
+                perror("Error while writing to client");
+                close(loanFileDescriptor);
+                return false;
+            }
+
+            // Clear buffer and read the response from the client
+            bzero(readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer) - 1);
+            if (readBytes == -1)
+            {
+                perror("Error while reading from client");
+                close(loanFileDescriptor);
+                return false;
+            }
+
+            // Update the loan status based on client response
             if (strcmp(readBuffer, "y") == 0)
             {
                 loan1.approved = true;
@@ -602,35 +644,75 @@ bool approve_reject_loans(int connectionFileDescriptor, char *employee_id)
                 loan1.approved = false;
             }
 
+            // Clear buffers before locking and updating the loan record
             bzero(writeBuffer, sizeof(writeBuffer));
             bzero(readBuffer, sizeof(readBuffer));
 
+            // Lock the current record for writing
+            memset(&lock, 0, sizeof(lock));
+            lock.l_type = F_WRLCK;
+            lock.l_whence = SEEK_CUR;
+            lock.l_start = 0;
+            lock.l_len = sizeof(struct loan_struct);
+
+            if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file for writing");
+                close(loanFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
+
+            // Write the updated loan record
             write(loanFileDescriptor, &loan1, sizeof(struct loan_struct));
 
-            // unlocking
+            // Unlock the record after updating
             lock.l_type = F_UNLCK;
             if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
             {
-                perror("Error releasing the lock");
+                perror("Error releasing the write lock");
             }
+
+            // Close the file descriptor after processing
             close(loanFileDescriptor);
-            strcpy(writeBuffer, UPDATED);
+
+            // Send the success message to the client
+            strcpy(writeBuffer, "The DATA has been UPDATED");
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
+            if (writeBytes == -1)
+            {
+                perror("Error while writing update message to client");
+                return false;
+            }
+
+            // Clear buffer and read the client's acknowledgment
+            bzero(readBuffer, sizeof(readBuffer));
+            readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer) - 1);
+            if (readBytes == -1)
+            {
+                perror("Error while reading acknowledgment from client");
+                return false;
+            }
+
             return true;
         }
     }
-    // if ID not found
-    //  unlocking
-    lock.l_type = F_UNLCK;
-    if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
-    {
-        perror("Error releasing the lock");
-    }
+
+    // If loan number not found, close file and notify the client
     close(loanFileDescriptor);
-    strcpy(writeBuffer, NOT_UPDATED);
+    strcpy(writeBuffer, "Loan not found. Operation not updated.");
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-    readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing loan not found message to client");
+    }
+
+    // Read acknowledgment from client
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer) - 1);
+    if (readBytes == -1)
+    {
+        perror("Error while reading acknowledgment from client");
+    }
 
     return true;
 }
@@ -648,27 +730,30 @@ bool view_assigned_loan_applications(int connectionFileDescriptor, char *employe
 
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_RDLCK;    // Read lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
 
-    // Try to acquire the lock in blocking mode
-    if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(loanFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
     struct loan_struct loan1;
     char LoanList[1000];
-    LoanList[0] = '\0';
+    LoanList[0] = '\0'; // Initialize LoanList as empty
 
-    // getting all the loans ID to choose from
+    // Get all the loan applications assigned to the employee
     while (read(loanFileDescriptor, &loan1, sizeof(struct loan_struct)) == sizeof(struct loan_struct))
     {
         if (strcmp(loan1.employee_id, employee_id) == 0)
         {
+            // Lock the record
+            lock.l_type = F_RDLCK;
+            lock.l_whence = SEEK_CUR;
+            lock.l_start = -sizeof(struct loan_struct); // Lock the current record
+            lock.l_len = sizeof(struct loan_struct);
+
+            if (fcntl(loanFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(loanFileDescriptor);
+                return false;
+            }
+
+            // Build the list of loan details
             char tempBuffer[1000]; // Temporary buffer to construct the string
             sprintf(tempBuffer, "Loan no: %d ", loan1.ln_no);
             strcat(LoanList, tempBuffer);
@@ -681,31 +766,50 @@ bool view_assigned_loan_applications(int connectionFileDescriptor, char *employe
                 strcat(LoanList, "Status: Rejected ");
             }
             else
+            {
                 strcat(LoanList, "Status: Accepted ");
+            }
             strcat(LoanList, "\n");
+
+            // Unlock the record after reading
+            lock.l_type = F_UNLCK;
+            if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error releasing the lock");
+            }
         }
     }
+
+    // Reset the file pointer to the beginning
     lseek(loanFileDescriptor, 0, SEEK_SET);
 
+    // Send the loan list to the client
     strcpy(writeBuffer, LoanList);
-    strcat(writeBuffer, "Press a character followed by enter to exit\n");
+    strcat(writeBuffer, "Press any character followed by ENTER to exit\n");
 
+    // Clear the LoanList buffer after use
     bzero(LoanList, sizeof(LoanList));
-    LoanList[0] = '\0';
 
+    // Write the loan list and exit prompt to the client
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     if (writeBytes == -1)
     {
-        perror("Error while writing to file!");
+        perror("Error while writing to client!");
+        close(loanFileDescriptor);
         return false;
     }
-    readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
-    // unlocking
-    lock.l_type = F_UNLCK;
-    if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
+
+    // Wait for a single character input from the client
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
     {
-        perror("Error releasing the lock");
+        perror("Error while reading from client");
+        close(loanFileDescriptor);
+        return false;
     }
+    close(loanFileDescriptor);
+
     return true;
 }
 
@@ -722,27 +826,13 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
         return false;
     }
 
-    struct flock lock;
-    memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_WRLCK;    // Write lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
-
-    // Try to acquire the lock in blocking mode
-    if (fcntl(employeeFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(employeeFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
-
     struct employee_struct employee1;
     while (read(employeeFileDescriptor, &employee1, sizeof(struct employee_struct)) == sizeof(struct employee_struct))
     {
         if (strcmp(employee1.login, employee_id) == 0)
         {
             lseek(employeeFileDescriptor, -1 * sizeof(struct employee_struct), SEEK_CUR);
+
             // to update password
             bzero(writeBuffer, sizeof(writeBuffer));
             bzero(readBuffer, sizeof(readBuffer));
@@ -753,6 +843,21 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
             strcpy(employee1.password, readBuffer);
+
+            struct flock lock;
+            memset(&lock, 0, sizeof(lock));
+            lock.l_type = F_WRLCK;    // Write lock
+            lock.l_whence = SEEK_CUR; // Start from the current position of the file
+            lock.l_start = 0;         // Offset 0
+            lock.l_len = sizeof(struct employee_struct);
+
+            // Try to acquire the lock in blocking mode
+            if (fcntl(employeeFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(employeeFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
 
             write(employeeFileDescriptor, &employee1, sizeof(struct employee_struct));
 
