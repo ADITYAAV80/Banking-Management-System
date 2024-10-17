@@ -172,20 +172,6 @@ bool view_account_balance(int connectionFileDescriptor, char *customer_id)
         return false;
     }
 
-    struct flock lock;
-    memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_RDLCK;    // Read lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
-
-    // Try to acquire the lock in blocking mode
-    if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(customerFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
     struct customer_struct customer;
     char login[20];
     strcpy(login, customer_id);
@@ -198,6 +184,21 @@ bool view_account_balance(int connectionFileDescriptor, char *customer_id)
     {
         if (strcmp(customer.login, login) == 0)
         {
+            struct flock lock;
+            memset(&lock, 0, sizeof(lock));
+            lock.l_type = F_RDLCK;
+            lock.l_whence = SEEK_CUR;
+            lock.l_start = -sizeof(struct customer_struct);
+            lock.l_len = sizeof(struct customer_struct);
+
+            // Try to acquire the lock in blocking mode
+            if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(customerFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
+
             char myStr[100];
             sprintf(myStr, "\nYour Balance is: %d\n", customer.balance);
 
@@ -223,12 +224,7 @@ bool view_account_balance(int connectionFileDescriptor, char *customer_id)
         }
     }
     strcpy(writeBuffer, "Wrong Option!\n Press any character followed by  Enter key to exit\n");
-    // unlocking
-    lock.l_type = F_UNLCK;
-    if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
-    {
-        perror("Error releasing the lock");
-    }
+
     writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     close(customerFileDescriptor);

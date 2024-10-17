@@ -1333,21 +1333,22 @@ bool add_customer_admin(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     strcpy(new_customer.password, readBuffer);
 
-    // make customer active from the beginning
+    // make CUSTOMER active from the beginning
     new_customer.active = true;
+    new_customer.balance = 0;
 
     customerFileDescriptor = open("CUSTOMER_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
     if (customerFileDescriptor == -1)
     {
-        perror("Error while creating / opening customer file!");
+        perror("Error while creating / opening CUSTOMER file!");
         return false;
     }
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
     lock.l_type = F_WRLCK;    // Write lock
-    lock.l_whence = SEEK_END; // Start from the beginning of the file
+    lock.l_whence = SEEK_SET; // Start from the beginning of the file
     lock.l_start = 0;         // Offset 0
-    lock.l_len = sizeof(struct customer_struct);
+    lock.l_len = 0;           // Lock the entire file
 
     // Try to acquire the lock in blocking mode
     if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
@@ -1356,12 +1357,12 @@ bool add_customer_admin(int connectionFileDescriptor)
         close(customerFileDescriptor);
         exit(EXIT_FAILURE);
     }
-    // writing the customers data into the file
+    // writing the CUSTOMERs data into the file
     bzero(writeBuffer, sizeof(writeBuffer));
     writeBytes = write(customerFileDescriptor, &new_customer, sizeof(struct customer_struct));
     if (writeBytes == -1)
     {
-        perror("Error while writing customer record to file!");
+        perror("Error while writing CUSTOMER record to file!");
         return false;
     }
     // releasing the lock
@@ -1478,7 +1479,7 @@ bool view_customer_details(int connectionFileDescriptor)
                 exit(EXIT_FAILURE);
             }
             char myStr[100];
-            sprintf(myStr, "Mng No: %d\n", customer.cus_no);
+            sprintf(myStr, "Cus No: %d\n", customer.cus_no);
             strcat(customerlist, myStr);
 
             sprintf(myStr, "Name: %s\n", customer.name);
@@ -1494,6 +1495,9 @@ bool view_customer_details(int connectionFileDescriptor)
             strcat(customerlist, myStr);
 
             sprintf(myStr, "Login ID: %s\n", customer.login);
+            strcat(customerlist, myStr);
+
+            sprintf(myStr, "Balance: %d\n", customer.balance);
             strcat(customerlist, myStr);
 
             strcpy(writeBuffer, customerlist);
