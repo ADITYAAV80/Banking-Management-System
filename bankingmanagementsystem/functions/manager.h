@@ -389,10 +389,6 @@ bool assign_loans(int connectionFileDescriptor, char *manager_id)
     ssize_t readBytes, writeBytes;
     char readBuffer[1000], writeBuffer[1000];
 
-    // Reset buffers
-    bzero(readBuffer, sizeof(readBuffer));
-    bzero(writeBuffer, sizeof(writeBuffer));
-
     int loanFileDescriptor = open("LOAN_FILE", O_RDWR, 0777);
     if (loanFileDescriptor == -1)
     {
@@ -537,13 +533,7 @@ bool assign_loans(int connectionFileDescriptor, char *manager_id)
     bzero(readBuffer, sizeof(readBuffer));
 
     // Read employee selection from the client
-    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer) - 1); // Prevent buffer overflow
-    if (readBytes == -1)
-    {
-        perror("Error while reading from client!");
-        return false;
-    }
-    readBuffer[readBytes] = '\0'; // Null-terminate the input to make it a valid string
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer)); // Prevent buffer overflow
     char assigned_employee[20];
     strcpy(assigned_employee, readBuffer);                     // Copy the employee ID
     printf("\nEmployee assigned to: %s\n", assigned_employee); // Log the employee assignment

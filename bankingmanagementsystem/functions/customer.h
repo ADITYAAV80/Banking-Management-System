@@ -380,7 +380,14 @@ bool deposit_money(int connectionFileDescriptor, char *customer_id)
                 close(TransactionFileDescriptor);
                 return false;
             }
-            struct flock clock = {F_WRLCK, SEEK_CUR, -sizeof(struct customer_struct), sizeof(struct customer_struct), getpid()};
+
+            struct flock clock;
+            memset(&clock, 0, sizeof(clock));
+            clock.l_type = F_WRLCK;    // Write clock
+            clock.l_whence = SEEK_END; // Start from the current position of the file
+            clock.l_start = 0;         // Offset 0
+            clock.l_len = sizeof(struct customer_struct);
+
             if (fcntl(CustomerFileDescriptor, F_SETLKW, &clock) == -1)
             {
                 perror("Error locking customer record");
@@ -389,7 +396,22 @@ bool deposit_money(int connectionFileDescriptor, char *customer_id)
                 return false;
             }
 
+            struct flock tlock;
+            memset(&tlock, 0, sizeof(tlock));
+            tlock.l_type = F_WRLCK;    // Write tlock
+            tlock.l_whence = SEEK_CUR; // Start from the current position of the file
+            tlock.l_start = 0;         // Offset 0
+            tlock.l_len = sizeof(struct customer_struct);
+
+            if (fcntl(TransactionFileDescriptor, F_SETLKW, &tlock) == -1)
+            {
+                perror("Error locking customer record");
+                close(CustomerFileDescriptor);
+                close(TransactionFileDescriptor);
+                return false;
+            }
             write(CustomerFileDescriptor, &new_customer, sizeof(struct customer_struct));
+            write(TransactionFileDescriptor, &new_transaction, sizeof(struct transaction_struct));
 
             // Unlock the customer record
             clock.l_type = F_UNLCK;
@@ -398,23 +420,16 @@ bool deposit_money(int connectionFileDescriptor, char *customer_id)
                 perror("Error unlocking customer record");
             }
 
+            // Unlock the transaction record
+            tlock.l_type = F_UNLCK;
+            if (fcntl(TransactionFileDescriptor, F_SETLK, &tlock) == -1)
+            {
+                perror("Error unlocking customer record");
+            }
+
             break;
         }
     }
-
-    // Append the new transaction to the transaction file (no need to lock the entire file)
-    writeBytes = write(TransactionFileDescriptor, &new_transaction, sizeof(struct transaction_struct));
-    if (writeBytes == -1)
-    {
-        perror("Error writing new transaction record");
-        close(TransactionFileDescriptor);
-        close(CustomerFileDescriptor);
-        return false;
-    }
-
-    // Close both files
-    close(TransactionFileDescriptor);
-    close(CustomerFileDescriptor);
 
     // Notify the client that the balance has been updated
     strcpy(writeBuffer, "Balance updated\nPress character followed by Enter key to exit menu");
@@ -511,7 +526,7 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
     strcpy(new_transaction.type, "D"); // Deposit transaction
     strcpy(new_transaction.destination_account, customer_id);
 
-    // Ask client for the amount to deposit
+    // Ask client for the amount to withdraw
     writeBytes = write(connectionFileDescriptor, TRANSACTION_AMOUNT_W, strlen(TRANSACTION_AMOUNT_W));
     if (writeBytes == -1)
     {
@@ -563,16 +578,8 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
     {
         if (strcmp(new_customer.login, customer_id) == 0)
         {
-            struct flock clock = {F_WRLCK, SEEK_CUR, -sizeof(struct customer_struct), sizeof(struct customer_struct), getpid()};
-            if (fcntl(CustomerFileDescriptor, F_SETLKW, &clock) == -1)
-            {
-                perror("Error locking customer record");
-                close(CustomerFileDescriptor);
-                close(TransactionFileDescriptor);
-                return false;
-            }
 
-            if ((new_customer.balance - new_transaction.amount) <= 0)
+            if ((new_customer.balance - new_transaction.amount) < 0)
             {
                 strcpy(writeBuffer, "Low Balance\nPress Character followed by Enter to Exit\n");
                 writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
@@ -584,20 +591,44 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
                 readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
                 return false;
             }
-
             // Update the customer's balance
             new_customer.balance -= new_transaction.amount;
             new_transaction.balance_after = new_customer.balance;
 
             // Seek back to the customer record and write the updated balance
-            if (lseek(CustomerFileDescriptor, -sizeof(struct customer_struct), SEEK_CUR) == -1)
+            lseek(CustomerFileDescriptor, -sizeof(struct customer_struct), SEEK_CUR);
+
+            struct flock clock;
+            memset(&clock, 0, sizeof(clock));
+            clock.l_type = F_WRLCK;    // Write clock
+            clock.l_whence = SEEK_CUR; // Start from the current position of the file
+            clock.l_start = 0;         // Offset 0
+            clock.l_len = sizeof(struct transaction_struct);
+
+            if (fcntl(CustomerFileDescriptor, F_SETLKW, &clock) == -1)
             {
-                perror("Error seeking back to customer record");
+                perror("Error locking customer record");
+                close(CustomerFileDescriptor);
+                close(TransactionFileDescriptor);
+                return false;
+            }
+
+            struct flock tlock;
+            memset(&tlock, 0, sizeof(tlock));
+            tlock.l_type = F_WRLCK;    // Write tlock
+            tlock.l_whence = SEEK_END; // Start from the current position of the file
+            tlock.l_start = 0;         // Offset 0
+            tlock.l_len = sizeof(struct customer_struct);
+
+            if (fcntl(TransactionFileDescriptor, F_SETLKW, &tlock) == -1)
+            {
+                perror("Error locking customer record");
                 close(CustomerFileDescriptor);
                 close(TransactionFileDescriptor);
                 return false;
             }
             write(CustomerFileDescriptor, &new_customer, sizeof(struct customer_struct));
+            write(TransactionFileDescriptor, &new_transaction, sizeof(struct transaction_struct));
 
             // Unlock the customer record
             clock.l_type = F_UNLCK;
@@ -606,23 +637,16 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
                 perror("Error unlocking customer record");
             }
 
+            // Unlock the transaction record
+            tlock.l_type = F_UNLCK;
+            if (fcntl(TransactionFileDescriptor, F_SETLK, &tlock) == -1)
+            {
+                perror("Error unlocking customer record");
+            }
+
             break;
         }
     }
-
-    // Append the new transaction to the transaction file (no need to lock the entire file)
-    writeBytes = write(TransactionFileDescriptor, &new_transaction, sizeof(struct transaction_struct));
-    if (writeBytes == -1)
-    {
-        perror("Error writing new transaction record");
-        close(TransactionFileDescriptor);
-        close(CustomerFileDescriptor);
-        return false;
-    }
-
-    // Close both files
-    close(TransactionFileDescriptor);
-    close(CustomerFileDescriptor);
 
     // Notify the client that the balance has been updated
     strcpy(writeBuffer, "Balance updated\nPress character followed by Enter key to exit menu");
@@ -633,11 +657,401 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
         return false;
     }
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
-
     return true;
 }
 
-bool transfer_funds(int connectionFileDescriptor, char *customer_id) {}
+bool transfer_funds(int connectionFileDescriptor, char *customer_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+
+    struct transaction_struct sender_transaction, receiver_transaction, prev_transaction;
+    struct customer_struct sender_customer, receiver_customer;
+
+    // Consolidated transaction file logic
+    int TransactionFileDescriptor = open("TRANSACTION_FILE", O_RDWR | O_CREAT, S_IRWXU);
+    if (TransactionFileDescriptor == -1)
+    {
+        perror("Error while opening transaction file");
+        return false;
+    }
+
+    // Get the last transaction ID
+    off_t fileSize = lseek(TransactionFileDescriptor, 0, SEEK_END);
+    if (fileSize < sizeof(struct transaction_struct))
+    {
+        sender_transaction.t_id = 1; // First transaction
+    }
+    else
+    {
+        // Move to the last transaction record and read it
+        lseek(TransactionFileDescriptor, -sizeof(struct transaction_struct), SEEK_END);
+        readBytes = read(TransactionFileDescriptor, &prev_transaction, sizeof(struct transaction_struct));
+        if (readBytes == -1)
+        {
+            perror("Error reading last transaction");
+            close(TransactionFileDescriptor);
+            return false;
+        }
+        sender_transaction.t_id = prev_transaction.t_id + 1;
+        receiver_transaction.t_id = sender_transaction.t_id + 1;
+    }
+
+    // Open the transaction file in read-only mode to determine the last transaction ID
+    TransactionFileDescriptor = open("TRANSACTION_FILE", O_RDONLY);
+    if (TransactionFileDescriptor == -1)
+    {
+        perror("Error while opening transaction file");
+        return false;
+    }
+    else
+    {
+        struct stat fileStat;
+        if (fstat(TransactionFileDescriptor, &fileStat) == -1)
+        {
+            perror("Error getting file stats");
+            close(TransactionFileDescriptor);
+            return false;
+        }
+        else
+        {
+            // Move the file pointer to the last transaction record
+            int offset = lseek(TransactionFileDescriptor, -sizeof(struct transaction_struct), SEEK_END);
+            if (offset == -1)
+            {
+                perror("Error seeking to last transaction record");
+                close(TransactionFileDescriptor);
+                return false;
+            }
+
+            // Lock the last transaction record only
+            struct flock lock = {F_RDLCK, SEEK_SET, offset, sizeof(struct transaction_struct), getpid()};
+            if (fcntl(TransactionFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error obtaining read lock on last transaction record");
+                close(TransactionFileDescriptor);
+                return false;
+            }
+
+            // Read the last transaction record
+            readBytes = read(TransactionFileDescriptor, &prev_transaction, sizeof(struct transaction_struct));
+            if (readBytes == -1)
+            {
+                perror("Error reading last transaction record");
+                close(TransactionFileDescriptor);
+                return false;
+            }
+
+            // Unlock the last transaction record
+            lock.l_type = F_UNLCK;
+            if (fcntl(TransactionFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error unlocking the last transaction record");
+            }
+
+            // Set the new transaction ID based on the last transaction
+            receiver_transaction.t_id = prev_transaction.t_id + 2;
+        }
+        close(TransactionFileDescriptor);
+    }
+    int customerFileDescriptor = open("CUSTOMER_FILE", O_RDWR, 0777);
+    if (customerFileDescriptor == -1)
+    {
+        perror("Error while opening customer file");
+        return false;
+    }
+
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+
+    struct customer_struct customer1;
+    char customerlist[1000];
+    bzero(customerlist, sizeof(customerlist)); // Clear customerlist buffer
+
+    // Getting customer IDs to assign the loan
+    while (read(customerFileDescriptor, &customer1, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
+    {
+        lock.l_type = F_RDLCK;
+        lock.l_whence = SEEK_CUR;
+        lock.l_start = -sizeof(struct customer_struct);
+        lock.l_len = sizeof(struct customer_struct);
+
+        // Try to acquire the lock in blocking mode
+        if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
+        {
+            perror("Error locking the file");
+            close(customerFileDescriptor);
+            return false;
+        }
+
+        char tempBuffer[1000];                 // Temporary buffer for constructing customer list
+        bzero(tempBuffer, sizeof(tempBuffer)); // Reset tempBuffer
+        sprintf(tempBuffer, "Login: %s ", customer1.login);
+        strcat(customerlist, tempBuffer);
+        sprintf(tempBuffer, "Name: %s ", customer1.name);
+        strcat(customerlist, tempBuffer);
+        strcat(customerlist, "\n");
+
+        // Unlocking the file
+        lock.l_type = F_UNLCK;
+        if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
+        {
+            perror("Error releasing the lock");
+        }
+    }
+    close(customerFileDescriptor);
+
+    strcpy(writeBuffer, customerlist);
+    strcat(writeBuffer, "Select one of the customers to assign/reassign\n");
+
+    bzero(customerlist, sizeof(customerlist)); // Clear customerlist buffer after use
+
+    // Write customer list to client
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error while writing to file!");
+        return false;
+    }
+
+    // Reset buffers before reading from client
+    bzero(writeBuffer, sizeof(writeBuffer));
+    bzero(readBuffer, sizeof(readBuffer));
+
+    // Read customer selection from the client
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    char receiver_id[30];
+    strcpy(receiver_id, readBuffer); // Copy the reciever ID
+
+    // Prepare the sender transaction
+    strcpy(sender_transaction.source_account, customer_id);
+    strcpy(sender_transaction.destination_account, receiver_id);
+    strcpy(sender_transaction.type, "D"); // Deposit transaction
+
+    // Prepare the new transaction
+    strcpy(receiver_transaction.source_account, customer_id);
+    strcpy(receiver_transaction.destination_account, receiver_id);
+    strcpy(receiver_transaction.type, "C"); // Credit transaction
+
+    // Ask client for the amount to send
+    writeBytes = write(connectionFileDescriptor, TRANSACTION_AMOUNT_S, strlen(TRANSACTION_AMOUNT_S));
+    if (writeBytes == -1)
+    {
+        perror("Error writing TRANSACTION_AMOUNT message to client");
+        return false;
+    }
+
+    bzero(readBuffer, sizeof(readBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    if (readBytes == -1)
+    {
+        perror("Error reading TRANSACTION_AMOUNT");
+        return false;
+    }
+    sender_transaction.amount = atoi(readBuffer);
+    receiver_transaction.amount = atoi(readBuffer);
+
+    printf("\nSender\n%d", sender_transaction.t_id);
+    printf("%s\n", sender_transaction.source_account);
+    printf("%s\n", sender_transaction.destination_account);
+    printf("%s\n", sender_transaction.type);
+    printf("%d\n", sender_transaction.amount);
+
+    printf("\nReceiver\n%d", receiver_transaction.t_id);
+    printf("%s\n", receiver_transaction.source_account);
+    printf("%s\n", receiver_transaction.destination_account);
+    printf("%s\n", receiver_transaction.type);
+    printf("%d\n", receiver_transaction.amount);
+
+    // Check for invalid amounts
+    if (sender_transaction.amount < 0)
+    {
+        strcpy(writeBuffer, "Invalid operation\nPress Character followed by Enter to Exit\n");
+        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+        if (writeBytes == -1)
+        {
+            perror("Error writing invalid amount message");
+            return false;
+        }
+        readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+        return false;
+    }
+
+    // Open transaction and customer files for updating
+    TransactionFileDescriptor = open("TRANSACTION_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
+    if (TransactionFileDescriptor == -1)
+    {
+        perror("Error opening transaction file");
+        return false;
+    }
+
+    int CustomerFileDescriptor = open("CUSTOMER_FILE", O_RDWR, S_IRWXU);
+    if (CustomerFileDescriptor == -1)
+    {
+        perror("Error opening customer file");
+        close(TransactionFileDescriptor);
+        return false;
+    }
+
+    // Lock the customer record to update the balance
+    while (read(CustomerFileDescriptor, &sender_customer, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
+    {
+        if (strcmp(sender_customer.login, customer_id) == 0)
+        {
+
+            if ((sender_customer.balance - sender_transaction.amount) < 0)
+            {
+                strcpy(writeBuffer, "Low Balance\nPress Character followed by Enter to Exit\n");
+                writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+                if (writeBytes == -1)
+                {
+                    perror("Error writing invalid amount message");
+                    return false;
+                }
+                readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+                return false;
+            }
+            // Update the customer's balance
+            sender_customer.balance -= sender_transaction.amount;
+            sender_transaction.balance_after = sender_customer.balance;
+
+            // Seek back to the customer record and write the updated balance
+            lseek(CustomerFileDescriptor, -sizeof(struct customer_struct), SEEK_CUR);
+
+            struct flock clock;
+            memset(&clock, 0, sizeof(clock));
+            clock.l_type = F_WRLCK;    // Write clock
+            clock.l_whence = SEEK_CUR; // Start from the current position of the file
+            clock.l_start = 0;         // Offset 0
+            clock.l_len = sizeof(struct transaction_struct);
+
+            if (fcntl(CustomerFileDescriptor, F_SETLKW, &clock) == -1)
+            {
+                perror("Error locking customer record");
+                close(CustomerFileDescriptor);
+                close(TransactionFileDescriptor);
+                return false;
+            }
+
+            struct flock tlock;
+            memset(&tlock, 0, sizeof(tlock));
+            tlock.l_type = F_WRLCK;    // Write tlock
+            tlock.l_whence = SEEK_END; // Start from the current position of the file
+            tlock.l_start = 0;         // Offset 0
+            tlock.l_len = sizeof(struct customer_struct);
+
+            if (fcntl(TransactionFileDescriptor, F_SETLKW, &tlock) == -1)
+            {
+                perror("Error locking customer record");
+                close(CustomerFileDescriptor);
+                close(TransactionFileDescriptor);
+                return false;
+            }
+            write(CustomerFileDescriptor, &sender_customer, sizeof(struct customer_struct));
+            write(TransactionFileDescriptor, &sender_transaction, sizeof(struct transaction_struct));
+
+            // Unlock the customer record
+            clock.l_type = F_UNLCK;
+            if (fcntl(CustomerFileDescriptor, F_SETLK, &clock) == -1)
+            {
+                perror("Error unlocking customer record");
+            }
+
+            // Unlock the transaction record
+            tlock.l_type = F_UNLCK;
+            if (fcntl(TransactionFileDescriptor, F_SETLK, &tlock) == -1)
+            {
+                perror("Error unlocking customer record");
+            }
+
+            // Notify the client that the balance has been updated
+            strcpy(writeBuffer, "Amount sent\nPress character followed by Enter key to exit menu");
+        }
+    }
+
+    // Lock the customer record to update the balance
+    while (read(CustomerFileDescriptor, &receiver_customer, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
+    {
+        if (strcmp(receiver_customer.login, receiver_id) == 0)
+        {
+
+            // Update the customer's balance
+            receiver_customer.balance += receiver_transaction.amount;
+            receiver_transaction.balance_after = receiver_customer.balance;
+
+            // Seek back to the customer record and write the updated balance
+            lseek(CustomerFileDescriptor, -sizeof(struct customer_struct), SEEK_CUR);
+
+            struct flock clock;
+            memset(&clock, 0, sizeof(clock));
+            clock.l_type = F_WRLCK;    // Write clock
+            clock.l_whence = SEEK_CUR; // Start from the current position of the file
+            clock.l_start = 0;         // Offset 0
+            clock.l_len = sizeof(struct transaction_struct);
+
+            if (fcntl(CustomerFileDescriptor, F_SETLKW, &clock) == -1)
+            {
+                perror("Error locking customer record");
+                close(CustomerFileDescriptor);
+                close(TransactionFileDescriptor);
+                return false;
+            }
+
+            struct flock tlock;
+            memset(&tlock, 0, sizeof(tlock));
+            tlock.l_type = F_WRLCK;    // Write tlock
+            tlock.l_whence = SEEK_END; // Start from the current position of the file
+            tlock.l_start = 0;         // Offset 0
+            tlock.l_len = sizeof(struct customer_struct);
+
+            if (fcntl(TransactionFileDescriptor, F_SETLKW, &tlock) == -1)
+            {
+                perror("Error locking customer record");
+                close(CustomerFileDescriptor);
+                close(TransactionFileDescriptor);
+                return false;
+            }
+            write(CustomerFileDescriptor, &receiver_customer, sizeof(struct customer_struct));
+            write(TransactionFileDescriptor, &receiver_transaction, sizeof(struct transaction_struct));
+
+            // Unlock the customer record
+            clock.l_type = F_UNLCK;
+            if (fcntl(CustomerFileDescriptor, F_SETLK, &clock) == -1)
+            {
+                perror("Error unlocking customer record");
+            }
+
+            // Unlock the transaction record
+            tlock.l_type = F_UNLCK;
+            if (fcntl(TransactionFileDescriptor, F_SETLK, &tlock) == -1)
+            {
+                perror("Error unlocking customer record");
+            }
+
+            // Notify the client that the balance has been updated
+            strcat(writeBuffer, "Amount received\nPress character followed by Enter key to exit menu");
+            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            if (writeBytes == -1)
+            {
+                perror("Error writing balance update confirmation");
+                return false;
+            }
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+            return true;
+        }
+    }
+
+    // Notify the client that the balance has been updated
+    strcpy(writeBuffer, "Failed to send\nPress character followed by Enter key to exit menu");
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    if (writeBytes == -1)
+    {
+        perror("Error writing balance update confirmation");
+        return false;
+    }
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+    return true;
+}
 
 bool apply_loan(int connectionFileDescriptor, char *customer_id)
 {
@@ -766,66 +1180,6 @@ bool apply_loan(int connectionFileDescriptor, char *customer_id)
     return true;
 }
 
-bool change_password_customer(int connectionFileDescriptor, char *customer_id)
-{
-    ssize_t readBytes, writeBytes;
-    char readBuffer[1000], writeBuffer[1000];
-    int customerFileDescriptor = open("CUSTOMER_FILE", O_RDWR, 0777);
-    if (customerFileDescriptor == -1)
-    {
-        perror("Error while opening file");
-        return false;
-    }
-
-    struct flock lock;
-    memset(&lock, 0, sizeof(lock));
-    lock.l_type = F_WRLCK;    // Write lock
-    lock.l_whence = SEEK_SET; // Start from the beginning of the file
-    lock.l_start = 0;         // Offset 0
-    lock.l_len = 0;           // Lock the entire file
-
-    // Try to acquire the lock in blocking mode
-    if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
-    {
-        perror("Error locking the file");
-        close(customerFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
-
-    struct customer_struct customer1;
-    while (read(customerFileDescriptor, &customer1, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
-    {
-        if (strcmp(customer1.login, customer_id) == 0)
-        {
-            lseek(customerFileDescriptor, -1 * sizeof(struct customer_struct), SEEK_CUR);
-            // to update password
-            bzero(writeBuffer, sizeof(writeBuffer));
-            bzero(readBuffer, sizeof(readBuffer));
-
-            strcpy(writeBuffer, S_CUSTOMER_CHANGE_PASSWORD);
-
-            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
-
-            strcpy(customer1.password, readBuffer);
-
-            write(customerFileDescriptor, &customer1, sizeof(struct customer_struct));
-
-            lock.l_type = F_UNLCK; // to unlock file
-            if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
-            {
-                perror("Error releasing the lock");
-            }
-            close(customerFileDescriptor);
-            strcpy(writeBuffer, UPDATED);
-            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-            readBytes = read(connectionFileDescriptor, readBuffer, strlen(readBuffer));
-            break;
-        }
-    }
-    return true;
-}
-
 bool add_feedback(int connectionFileDescriptor, char *customer_id)
 {
 
@@ -950,48 +1304,106 @@ bool add_feedback(int connectionFileDescriptor, char *customer_id)
     return true;
 }
 
+bool change_password_customer(int connectionFileDescriptor, char *customer_id)
+{
+    ssize_t readBytes, writeBytes;
+    char readBuffer[1000], writeBuffer[1000];
+    int customerFileDescriptor = open("CUSTOMER_FILE", O_RDWR, 0777);
+    if (customerFileDescriptor == -1)
+    {
+        perror("Error while opening file");
+        return false;
+    }
+
+    struct customer_struct customer1;
+    while (read(customerFileDescriptor, &customer1, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
+    {
+        if (strcmp(customer1.login, customer_id) == 0)
+        {
+            lseek(customerFileDescriptor, -1 * sizeof(struct customer_struct), SEEK_CUR);
+
+            // to update password
+            bzero(writeBuffer, sizeof(writeBuffer));
+            bzero(readBuffer, sizeof(readBuffer));
+
+            strcpy(writeBuffer, S_CUSTOMER_CHANGE_PASSWORD);
+
+            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+
+            strcpy(customer1.password, readBuffer);
+
+            struct flock lock;
+            memset(&lock, 0, sizeof(lock));
+            lock.l_type = F_WRLCK;    // Write lock
+            lock.l_whence = SEEK_CUR; // Start from the current position of the file
+            lock.l_start = 0;         // Offset 0
+            lock.l_len = sizeof(struct customer_struct);
+
+            // Try to acquire the lock in blocking mode
+            if (fcntl(customerFileDescriptor, F_SETLKW, &lock) == -1)
+            {
+                perror("Error locking the file");
+                close(customerFileDescriptor);
+                exit(EXIT_FAILURE);
+            }
+
+            write(customerFileDescriptor, &customer1, sizeof(struct customer_struct));
+
+            lock.l_type = F_UNLCK; // to unlock file
+            if (fcntl(customerFileDescriptor, F_SETLK, &lock) == -1)
+            {
+                perror("Error releasing the lock");
+            }
+            close(customerFileDescriptor);
+            strcpy(writeBuffer, UPDATED);
+            writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+            readBytes = read(connectionFileDescriptor, &readBuffer, strlen(readBuffer));
+            break;
+        }
+    }
+    return true;
+}
+
 bool view_transaction_details(int connectionFileDescriptor, char *customer_id)
 {
     ssize_t readBytes, writeBytes;
     char readBuffer[1000], writeBuffer[1000];
 
-    int transactionFileDescriptor = open("TRANSACTION_FILE", O_RDONLY, 0777);
+    int transactionFileDescriptor = open("TRANSACTION_FILE", O_RDWR, 0777);
     if (transactionFileDescriptor == -1)
     {
         perror("Error while opening Transaction file");
         return false;
     }
 
+    // Set up the lock for this specific record
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+
     struct transaction_struct transaction;
     char TransactionList[1000];
-    char login[20];
-    strcpy(login, customer_id);
 
     bzero(writeBuffer, sizeof(writeBuffer));
     bzero(readBuffer, sizeof(readBuffer));
     TransactionList[0] = '\0';
 
-    // Loop to read all transaction records in the file
     while (read(transactionFileDescriptor, &transaction, sizeof(struct transaction_struct)) == sizeof(struct transaction_struct))
     {
-        if (strcmp(transaction.source_account, login) == 0)
+        if (strcmp(transaction.source_account, customer_id) == 0 || strcmp(transaction.destination_account, customer_id) == 0)
         {
-            // Set up the lock for this specific record
-            struct flock lock;
-            memset(&lock, 0, sizeof(lock));
-            lock.l_type = F_RDLCK; // Read lock
+            lock.l_type = F_RDLCK;
             lock.l_whence = SEEK_CUR;
-            lock.l_start = -sizeof(struct transaction_struct); // Lock the current record
-            lock.l_len = sizeof(struct transaction_struct);    // Lock size is one transaction record
+            lock.l_start = -sizeof(struct transaction_struct);
+            lock.l_len = sizeof(struct transaction_struct);
 
-            // Try to acquire the lock in blocking mode for this record
+            // Try to acquire the lock in blocking mode
             if (fcntl(transactionFileDescriptor, F_SETLKW, &lock) == -1)
             {
-                perror("Error locking the transaction record");
+                perror("Error locking the file");
                 close(transactionFileDescriptor);
-                return false;
+                exit(EXIT_FAILURE);
             }
-
             // Process the transaction details
             char myStr[100];
             sprintf(myStr, "Transaction No: %d\n", transaction.t_id);
@@ -1012,51 +1424,40 @@ bool view_transaction_details(int connectionFileDescriptor, char *customer_id)
             sprintf(myStr, "Balance After: %d\n", transaction.balance_after);
             strcat(TransactionList, myStr);
 
-            // Send transaction details to the client
             strcpy(writeBuffer, TransactionList);
-            strcat(writeBuffer, "To see next record, press a character followed by Enter\n");
+            strcat(writeBuffer, "Press any character followed by  Enter key \n");
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             if (writeBytes == -1)
             {
-                perror("Error while writing to connection!");
-                close(transactionFileDescriptor);
+                perror("Error while writing to file!");
                 return false;
             }
 
-            // Wait for the client to press a key to show the next record
-            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
-            if (readBytes == -1)
-            {
-                perror("Error while reading from connection!");
-                close(transactionFileDescriptor);
-                return false;
-            }
-
-            // Clear buffers for next iteration
-            bzero(TransactionList, sizeof(TransactionList));
-            bzero(writeBuffer, sizeof(writeBuffer));
-
-            // Unlock the current record after reading
+            // unlocking
             lock.l_type = F_UNLCK;
             if (fcntl(transactionFileDescriptor, F_SETLK, &lock) == -1)
             {
-                perror("Error unlocking the transaction record");
+                perror("Error releasing the lock");
             }
+            readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+            // Clear buffers for next iteration
+            bzero(TransactionList, sizeof(TransactionList));
+            bzero(writeBuffer, sizeof(writeBuffer));
         }
     }
-
-    // Send final response to the client
-    strcpy(writeBuffer, "No more records available.\n");
-    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
-    if (writeBytes == -1)
+    strcpy(writeBuffer, "End of records please press any character followed by  Enter key to exit\n");
+    // unlocking
+    lock.l_type = F_UNLCK;
+    if (fcntl(transactionFileDescriptor, F_SETLK, &lock) == -1)
     {
-        perror("Error while writing final message to connection!");
-        close(transactionFileDescriptor);
-        return false;
+        perror("Error releasing the lock");
     }
-
+    writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+    readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     close(transactionFileDescriptor);
-    return true;
+    bzero(writeBuffer, sizeof(writeBuffer));
+    bzero(readBuffer, sizeof(readBuffer));
+    return false;
 }
 
 #endif

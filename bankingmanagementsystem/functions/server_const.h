@@ -102,6 +102,7 @@
 #define LOAN_ADDED "Loan updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 #define TRANSACTION_AMOUNT "Please enter money to deposit\n"
 #define TRANSACTION_AMOUNT_W "Please enter money to withdraw\n"
+#define TRANSACTION_AMOUNT_S "Please enter money to send\n"
 #define TRANSACTION_ADDED "Transaction updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 
 #include <sys/ipc.h>

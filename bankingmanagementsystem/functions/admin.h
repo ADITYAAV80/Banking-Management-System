@@ -1501,7 +1501,7 @@ bool view_customer_details(int connectionFileDescriptor)
             strcat(customerlist, myStr);
 
             strcpy(writeBuffer, customerlist);
-            strcat(writeBuffer, "Press any character followed by  Enter key to exit\n");
+            strcat(writeBuffer, "Press any character followed by  Enter key \n");
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             if (writeBytes == -1)
             {
