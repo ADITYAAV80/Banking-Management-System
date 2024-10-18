@@ -10,6 +10,7 @@
 #include <errno.h>     // Import for `errno`
 #include <string.h>    //memset
 #include <unistd.h>    //read, close
+#include <crypt.h>
 
 #include "../../functions/server_const.h"
 #include "../../struct/struct_customer.h"
@@ -48,10 +49,14 @@ bool customer_password_checker(char *login_id, char *password)
         if (strcmp(customer.login, login_id) == 0)
         {
 
+            // Get the position of the customer record
+            off_t customer_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct customer_struct);
+
+            // Set up the read lock on the specific customer record
             lock.l_type = F_RDLCK;                       // Read lock
-            lock.l_whence = SEEK_CUR;                    // Start from the beginning of the file
-            lock.l_start = 0;                            // Offset 0
-            lock.l_len = sizeof(struct customer_struct); // Lock the entire file
+            lock.l_whence = SEEK_SET;                    // Use absolute position
+            lock.l_start = customer_record_pos;          // Lock at the position of the customer record
+            lock.l_len = sizeof(struct customer_struct); // Lock the size of the customer record
 
             // Try to acquire the lock in blocking mode
             if (fcntl(fileDescriptor, F_SETLKW, &lock) == -1)
@@ -61,7 +66,8 @@ bool customer_password_checker(char *login_id, char *password)
                 exit(EXIT_FAILURE);
             }
 
-            if (strcmp(customer.password, password) == 0)
+            char *hashed_input_password = crypt(password, HASH);
+            if (strcmp(hashed_input_password, customer.password) == 0)
             {
                 printf("Password match\n");
                 add_user(login_id);

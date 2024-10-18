@@ -427,8 +427,16 @@ bool assign_loans(int connectionFileDescriptor, char *manager_id)
         strcat(LoanList, tempBuffer);
         sprintf(tempBuffer, "Amount: %d ", loan1.amount);
         strcat(LoanList, tempBuffer);
+        if (strlen(loan1.employee_id) == 0)
+        {
+            strcat(LoanList, "Employee : None");
+        }
+        else
+        {
+            sprintf(tempBuffer, "Employee: %s ", loan1.employee_id);
+            strcat(LoanList, tempBuffer);
+        }
         strcat(LoanList, "\n");
-
         // Unlocking the file
         lock.l_type = F_UNLCK;
         if (fcntl(loanFileDescriptor, F_SETLK, &lock) == -1)
@@ -535,7 +543,34 @@ bool assign_loans(int connectionFileDescriptor, char *manager_id)
     // Read employee selection from the client
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer)); // Prevent buffer overflow
     char assigned_employee[20];
-    strcpy(assigned_employee, readBuffer);                     // Copy the employee ID
+    strcpy(assigned_employee, readBuffer); // Copy the employee ID
+
+    bool found_employee = false;
+
+    while (read(employeeFileDescriptor, &employee1, sizeof(struct employee_struct)) == sizeof(struct employee_struct))
+    {
+        if (strcmp(employee1.login, assigned_employee) == 0)
+        {
+            found_employee = true;
+            break;
+        }
+    }
+    lseek(employeeFileDescriptor, 0, SEEK_SET); // Move the file descriptor pointer to the start
+
+    if (!found_employee)
+    {
+        // Write employee list to client
+        strcpy(writeBuffer, "No employee found\nPress character followed by Enter to exit\n");
+        writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
+        if (writeBytes == -1)
+        {
+            perror("Error while writing to file!");
+            return false;
+        }
+        readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+        return false;
+    }
+
     printf("\nEmployee assigned to: %s\n", assigned_employee); // Log the employee assignment
 
     // Reset buffers
@@ -685,7 +720,8 @@ bool change_password_manager(int connectionFileDescriptor, char *manager_id)
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
-            strcpy(manager1.password, readBuffer);
+            char *hashed_password = crypt(readBytes, HASH); // Use SHA-512 with a salt
+            strcpy(manager1.password, hashed_password);     // Store hashed password
 
             struct flock lock;
             memset(&lock, 0, sizeof(lock));

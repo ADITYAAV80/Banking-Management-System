@@ -1,6 +1,10 @@
 #ifndef CONSTANTS
 #define CONSTANTS
 
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <crypt.h>
+
 #define CHOICE "(y/n)"
 #define EXIT "Enter any character and press ENTER to EXIT\n"
 
@@ -105,10 +109,9 @@
 #define TRANSACTION_AMOUNT_S "Please enter money to send\n"
 #define TRANSACTION_ADDED "Transaction updated successfully\nEnter any character and press ENTER to go to ADMIN MENU\n"
 
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #define MULTIPLE_LOGIN "\nUser already logged in \nEnter any character and press ENTER to go to ADMIN MENU\n"
 #define MAX_USERS 100
 #define USERNAME_LENGTH 30
+#define HASH "UPPIGINTHABERERUCHIILLA"
 
 #endif

@@ -45,10 +45,14 @@ bool manager_password_checker(char *login_id, char *password)
     {
         if (strcmp(manager.login, login_id) == 0)
         {
-            lock.l_type = F_RDLCK;    // Read lock
-            lock.l_whence = SEEK_CUR; // Start from the beginning of the file
-            lock.l_start = 0;         // Offset 0
-            lock.l_len = 0;           // Lock the entire file
+            // Get the position of the employee record
+            off_t manager_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct manager_struct);
+
+            // Set up the read lock on the specific employee record
+            lock.l_type = F_RDLCK;                      // Read lock
+            lock.l_whence = SEEK_SET;                   // Use absolute position
+            lock.l_start = manager_record_pos;          // Lock at the position of the employee record
+            lock.l_len = sizeof(struct manager_struct); // Lock the size of the employee record
 
             // Try to acquire the lock in blocking mode
             if (fcntl(fileDescriptor, F_SETLKW, &lock) == -1)
@@ -57,7 +61,9 @@ bool manager_password_checker(char *login_id, char *password)
                 close(fileDescriptor);
                 exit(EXIT_FAILURE);
             }
-            if (strcmp(manager.password, password) == 0)
+
+            char *hashed_input_password = crypt(password, HASH);
+            if (strcmp(manager.password, hashed_input_password) == 0)
             {
 
                 printf("Password match\n");

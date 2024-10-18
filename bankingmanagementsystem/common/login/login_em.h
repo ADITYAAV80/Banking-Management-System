@@ -46,12 +46,17 @@ bool employee_password_checker(char *login_id, char *password)
         if (strcmp(employee.login, login_id) == 0)
         {
 
-            lock.l_type = F_RDLCK;                       // Read lock
-            lock.l_whence = SEEK_CUR;                    // Start from the beginning of the file
-            lock.l_start = 0;                            // Offset 0
-            lock.l_len = sizeof(struct employee_struct); // Lock the entire file
+            // Get the position of the employee record
+            off_t employee_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct employee_struct);
 
-            if (strcmp(employee.password, password) == 0)
+            // Set up the read lock on the specific employee record
+            lock.l_type = F_RDLCK;                       // Read lock
+            lock.l_whence = SEEK_SET;                    // Use absolute position
+            lock.l_start = employee_record_pos;          // Lock at the position of the employee record
+            lock.l_len = sizeof(struct employee_struct); // Lock the size of the employee record
+
+            char *hashed_input_password = crypt(password, HASH);
+            if (strcmp(employee.password, hashed_input_password) == 0)
             {
                 printf("Password match\n");
                 add_user(login_id);
