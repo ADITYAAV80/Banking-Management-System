@@ -9,7 +9,7 @@
 #define EXIT "Enter any character and press ENTER to EXIT\n"
 
 // server
-#define INITIAL_PROMPT "*********** BANK EMPLOYEE PORTAL ***********\nPlease specify by pressing:\n1 for ADMIN login\n2 for EMPLOYEE login\n3 for MANAGER login\n4 for CUSTOMER Login\nEnter any character and press ENTER to EXIT\n"
+#define INITIAL_PROMPT "*********** BANK EMPLOYEE PORTAL ***********\nPlease specify by pressing:\n1 for ADMIN login\n2 for EMPLOYEE login\n3 for MANAGER login\n4 for CUSTOMER Login\nEnter any option or press any other character and press ENTER to EXIT\n"
 #define MAX_LOGGED_IN 100
 
 // login
@@ -21,7 +21,7 @@
 #define S_ADMIN_PASSWORD "PASSWORD:"
 #define ADMIN_PASSWORD___ "admin"
 #define S_ADMIN_LOGIN_SUCCESS "******** WELCOME TO ADMIN PORTAL ********.\nYou are now logged in.\n"
-#define S_ADMIN_MENU "Welcome to Admin Menu.\nChoose the option you want to proceed with\n1. ADD EMPLOYEE\n2. MODIFY EMPLOYEE\n3. ADD MANAGER\n4. MODIFY MANAGER\n5. ADD CUSTOMER\n6. MODIFY CUSTOMER\n7. ADD ADMIN\n8. VIEW EMPLOYEE DETAILS\n9. VIEW MANAGER DETAILS\n10. VIEW  CUSTOMER DETAILS\n11. CHANGE PASSWORD\n12. LOGOUT AND EXIT\nCHOOSE THE OPTION\n"
+#define S_ADMIN_MENU "Welcome to Admin Menu.\nChoose the option you want to proceed with\n1. ADD EMPLOYEE\n2. MODIFY EMPLOYEE\n3. ADD MANAGER\n4. MODIFY MANAGER\n5. ADD CUSTOMER\n6. MODIFY CUSTOMER\n7. ADD ADMIN\n8. VIEW EMPLOYEE DETAILS\n9. VIEW MANAGER DETAILS\n10. VIEW  CUSTOMER DETAILS\n11. CHANGE PASSWORD\n12. DEACTIVATE EMPLOYEE\n13. ACTIVATE EMPLOYEE\n14. DEACTIVATE MANAGER\n15. ACTIVATE MANAGER\n16. LOGOUT AND EXIT\nCHOOSE THE OPTION\n"
 #define ADMIN_AGAIN "You have entered wrong option\n"
 #define S_ADMIN_LOGOUT "ADMIN has been logged out\n"
 #define ADMIN_NAME "Update admin name\n"
@@ -34,6 +34,22 @@
 #define ADMIN_UPDATE "Enter The LOGIN ID to be updated\n"
 #define ADMIN_DETAILS "Enter the Login ID whose details you want\n"
 #define S_ADMIN_CHANGE_PASSWORD "********Enter the new PASSWORD********\nPlease remember it\n"
+
+#define EMPLOYEE_BLOCK "Enter the Login ID of the employee to be BLOCKED\n(you can always UNBLOCK them)\n"
+#define EMPLOYEE_BLOCKED "The Employee has been BLOCKED\nPress any key to exit!\n"
+#define EMPLOYEE_NOT_BLOCKED "The Employee has NOT been BLOCKED\nWrong LOGIN ID!\nPress any key to exit!\n"
+
+#define EMPLOYEE_ACTIVE "Enter the Login ID of the employee to be ACTIVATED\n"
+#define EMPLOYEE_ACTIVATED "The employee has been ACTIVATED\nPress any key to exit!\n"
+#define EMPLOYEE_NOT_ACTIVATED "The employee has NOT been ACTIVATED\nWrong LOGIN ID!\nPress any key to exit!\n"
+
+#define MANAGER_BLOCK "Enter the Login ID of the manager to be BLOCKED\n(you can always UNBLOCK them)\n"
+#define MANAGER_BLOCKED "The Manager has been BLOCKED\nPress any key to exit!\n"
+#define MANAGER_NOT_BLOCKED "The Manager has NOT been BLOCKED\nWrong LOGIN ID!\nPress any key to exit!\n"
+
+#define MANAGER_ACTIVE "Enter the Login ID of the manager to be ACTIVATED\n"
+#define MANAGER_ACTIVATED "The manager has been ACTIVATED\nPress any key to exit!\n"
+#define MANAGER_NOT_ACTIVATED "The manager has NOT been ACTIVATED\nWrong LOGIN ID!\nPress any key to exit!\n"
 
 #define EMPLOYEE_NAME "Update employee name\n"
 #define EMPLOYEE_AGE "Update employee age\n"

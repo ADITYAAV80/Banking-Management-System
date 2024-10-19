@@ -733,7 +733,7 @@ bool apply_loan(int connectionFileDescriptor, char *customer_id)
         new_loan.ln_no = prev_loan.ln_no + 1;
     }
     close(LoanFileDescriptor);
-
+    strcpy(new_loan.employee_id, "");
     // for name of application
     strcpy(new_loan.customer_id, customer_id);
 
