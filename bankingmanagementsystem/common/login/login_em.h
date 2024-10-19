@@ -55,8 +55,9 @@ bool employee_password_checker(char *login_id, char *password)
             lock.l_start = employee_record_pos;          // Lock at the position of the employee record
             lock.l_len = sizeof(struct employee_struct); // Lock the size of the employee record
 
-            char *hashed_input_password = crypt(password, HASH);
-            if (strcmp(employee.password, hashed_input_password) == 0)
+            // HASHING
+            // char *hashed_input_password = crypt(password, HASH);
+            if (strcmp(employee.password, password) == 0)
             {
                 printf("Password match\n");
                 add_user(login_id);

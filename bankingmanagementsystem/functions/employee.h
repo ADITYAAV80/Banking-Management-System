@@ -286,8 +286,9 @@ bool add_customer_employee(int connectionFileDescriptor)
     bzero(readBuffer, sizeof(readBuffer));
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
-    char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-    strcpy(new_customer.password, hashed_password);  // Store hashed password
+    // HASHING
+    // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+    strcpy(new_customer.password, readBuffer); // Store hashed password
 
     // make customer active from the beginning
     new_customer.active = true;
@@ -1007,8 +1008,9 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
-            char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-            strcpy(employee1.password, hashed_password);     // Store hashed password
+            // HASHING
+            // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+            strcpy(employee1.password, readBuffer); // Store hashed password
 
             struct flock lock;
             memset(&lock, 0, sizeof(lock));

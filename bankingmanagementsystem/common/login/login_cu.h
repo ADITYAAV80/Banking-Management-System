@@ -66,8 +66,10 @@ bool customer_password_checker(char *login_id, char *password)
                 exit(EXIT_FAILURE);
             }
 
-            char *hashed_input_password = crypt(password, HASH);
-            if (strcmp(hashed_input_password, customer.password) == 0)
+            // HASHING
+            // char *hashed_input_password = crypt(password, HASH);
+
+            if (strcmp(password, customer.password) == 0)
             {
                 printf("Password match\n");
                 add_user(login_id);
