@@ -287,8 +287,8 @@ bool add_customer_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
     // HASHING
-    // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-    strcpy(new_customer.password, readBuffer); // Store hashed password
+    char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+    strcpy(new_customer.password, hashed_password);  // Store hashed password
 
     // make customer active from the beginning
     new_customer.active = true;
@@ -909,9 +909,13 @@ bool view_customer_transactions(int connectionFileDescriptor)
     bzero(readBuffer, sizeof(readBuffer));
     TransactionList[0] = '\0';
 
+    char d[2] = "D";
+    char c[2] = "C";
+
     while (read(transactionFileDescriptor, &transaction, sizeof(struct transaction_struct)) == sizeof(struct transaction_struct))
     {
-        if (strcmp(transaction.source_account, login) == 0 || strcmp(transaction.destination_account, login) == 0)
+        if ((strcmp(transaction.source_account, login) == 0 && strcmp(transaction.type, d) == 0) ||
+            (strcmp(transaction.destination_account, login) == 0) && strcmp(transaction.type, c) == 0)
         {
             lock.l_type = F_RDLCK;
             lock.l_whence = SEEK_CUR;
@@ -1009,8 +1013,8 @@ bool change_password_employee(int connectionFileDescriptor, char *employee_id)
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
             // HASHING
-            // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-            strcpy(employee1.password, readBuffer); // Store hashed password
+            char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+            strcpy(employee1.password, hashed_password);     // Store hashed password
 
             struct flock lock;
             memset(&lock, 0, sizeof(lock));

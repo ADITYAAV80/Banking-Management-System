@@ -76,9 +76,8 @@ bool admin_password_checker(char *login_id, char *password)
             }
 
             // HASHING
-            //  char *hashed_input_password = crypt(password, HASH);
-
-            if (strcmp(admin.password, password) == 0)
+            char *hashed_input_password = crypt(password, HASH);
+            if (strcmp(admin.password, hashed_input_password) == 0)
             {
 
                 printf("Password match\n");

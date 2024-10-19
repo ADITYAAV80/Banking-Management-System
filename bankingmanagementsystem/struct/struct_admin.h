@@ -11,7 +11,7 @@ struct admin_struct
     char address[50];
     char email[20];
     char login[20];
-    char password[10];
+    char password[120];
 };
 
 #endif

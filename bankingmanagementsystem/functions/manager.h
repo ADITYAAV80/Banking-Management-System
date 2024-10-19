@@ -721,9 +721,8 @@ bool change_password_manager(int connectionFileDescriptor, char *manager_id)
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
             // HASHING
-            // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-
-            strcpy(manager1.password, readBuffer); // Store hashed password
+            char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+            strcpy(manager1.password, hashed_password);      // Store hashed password
 
             struct flock lock;
             memset(&lock, 0, sizeof(lock));

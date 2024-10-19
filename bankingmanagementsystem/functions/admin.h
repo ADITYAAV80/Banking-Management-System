@@ -313,8 +313,8 @@ bool add_employee(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
     // HASHING
-    // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-    strcpy(new_employee.password, readBuffer);
+    char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+    strcpy(new_employee.password, hashed_password);
 
     // make employee active from the beginning
     new_employee.active = true;
@@ -824,9 +824,10 @@ bool add_manager(int connectionFileDescriptor)
 
     bzero(readBuffer, sizeof(readBuffer));
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+
     // HASHING
-    // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-    strcpy(new_manager.password, readBuffer);
+    char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+    strcpy(new_manager.password, hashed_password);
 
     // make manager active from the beginning
     new_manager.active = true;
@@ -1339,8 +1340,8 @@ bool add_customer_admin(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
     // HASHING
-    // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-    strcpy(new_customer.password, readBuffer);
+    char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+    strcpy(new_customer.password, hashed_password);
 
     // make CUSTOMER active from the beginning
     new_customer.active = true;
@@ -1856,8 +1857,8 @@ bool add_admin(int connectionFileDescriptor)
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
     // HASHING
-    // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-    strcpy(new_admin.password, readBuffer);
+    char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+    strcpy(new_admin.password, hashed_password);
 
     // make ADMIN active from the beginning
     new_admin.active = true;
@@ -1940,9 +1941,9 @@ bool change_password_admin(int connectionFileDescriptor, char *admin_id)
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
-            // hashing
-            // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-            strcpy(admin1.password, readBuffer);
+            // HASHING
+            char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+            strcpy(admin1.password, hashed_password);
 
             struct flock lock;
             memset(&lock, 0, sizeof(lock));

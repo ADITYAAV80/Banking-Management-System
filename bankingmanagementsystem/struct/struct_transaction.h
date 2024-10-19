@@ -5,7 +5,7 @@ struct transaction_struct
 {
 
     int t_id;
-    char type[1];
+    char type[2];
     int amount;
     char source_account[20];
     char destination_account[20];

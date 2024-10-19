@@ -46,50 +46,52 @@ bool customer_password_checker(char *login_id, char *password)
 
     while (read(fileDescriptor, &customer, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
     {
-        if (strcmp(customer.login, login_id) == 0)
+        if (customer.active == 1)
         {
-
-            // Get the position of the customer record
-            off_t customer_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct customer_struct);
-
-            // Set up the read lock on the specific customer record
-            lock.l_type = F_RDLCK;                       // Read lock
-            lock.l_whence = SEEK_SET;                    // Use absolute position
-            lock.l_start = customer_record_pos;          // Lock at the position of the customer record
-            lock.l_len = sizeof(struct customer_struct); // Lock the size of the customer record
-
-            // Try to acquire the lock in blocking mode
-            if (fcntl(fileDescriptor, F_SETLKW, &lock) == -1)
+            if (strcmp(customer.login, login_id) == 0)
             {
-                perror("Error locking the file");
-                close(fileDescriptor);
-                exit(EXIT_FAILURE);
-            }
 
-            // HASHING
-            // char *hashed_input_password = crypt(password, HASH);
+                // Get the position of the customer record
+                off_t customer_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct customer_struct);
 
-            if (strcmp(password, customer.password) == 0)
-            {
-                printf("Password match\n");
-                add_user(login_id);
-                print_logged_in_users();
+                // Set up the read lock on the specific customer record
+                lock.l_type = F_RDLCK;                       // Read lock
+                lock.l_whence = SEEK_SET;                    // Use absolute position
+                lock.l_start = customer_record_pos;          // Lock at the position of the customer record
+                lock.l_len = sizeof(struct customer_struct); // Lock the size of the customer record
 
-                // unlocking
-                lock.l_type = F_UNLCK;
-                if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                // Try to acquire the lock in blocking mode
+                if (fcntl(fileDescriptor, F_SETLKW, &lock) == -1)
                 {
-                    perror("Error releasing the lock");
+                    perror("Error locking the file");
+                    close(fileDescriptor);
+                    exit(EXIT_FAILURE);
                 }
-                close(fileDescriptor);
-                return true;
-            }
-            else
-            {
-                lock.l_type = F_UNLCK;
-                if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+
+                // HASHING
+                char *hashed_input_password = crypt(password, HASH);
+                if (strcmp(hashed_input_password, customer.password) == 0)
                 {
-                    perror("Error releasing the lock");
+                    printf("Password match\n");
+                    add_user(login_id);
+                    print_logged_in_users();
+
+                    // unlocking
+                    lock.l_type = F_UNLCK;
+                    if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                    {
+                        perror("Error releasing the lock");
+                    }
+                    close(fileDescriptor);
+                    return true;
+                }
+                else
+                {
+                    lock.l_type = F_UNLCK;
+                    if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                    {
+                        perror("Error releasing the lock");
+                    }
                 }
             }
         }

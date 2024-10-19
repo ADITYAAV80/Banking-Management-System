@@ -43,40 +43,44 @@ bool employee_password_checker(char *login_id, char *password)
 
     while (read(fileDescriptor, &employee, sizeof(struct employee_struct)) == sizeof(struct employee_struct))
     {
-        if (strcmp(employee.login, login_id) == 0)
+        if (employee.active == 1)
         {
-
-            // Get the position of the employee record
-            off_t employee_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct employee_struct);
-
-            // Set up the read lock on the specific employee record
-            lock.l_type = F_RDLCK;                       // Read lock
-            lock.l_whence = SEEK_SET;                    // Use absolute position
-            lock.l_start = employee_record_pos;          // Lock at the position of the employee record
-            lock.l_len = sizeof(struct employee_struct); // Lock the size of the employee record
-
-            // HASHING
-            // char *hashed_input_password = crypt(password, HASH);
-            if (strcmp(employee.password, password) == 0)
+            if (strcmp(employee.login, login_id) == 0)
             {
-                printf("Password match\n");
-                add_user(login_id);
-                print_logged_in_users();
-                // unlocking
-                lock.l_type = F_UNLCK;
-                if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+
+                // Get the position of the employee record
+                off_t employee_record_pos = lseek(fileDescriptor, 0, SEEK_CUR) - sizeof(struct employee_struct);
+
+                // Set up the read lock on the specific employee record
+                lock.l_type = F_RDLCK;                       // Read lock
+                lock.l_whence = SEEK_SET;                    // Use absolute position
+                lock.l_start = employee_record_pos;          // Lock at the position of the employee record
+                lock.l_len = sizeof(struct employee_struct); // Lock the size of the employee record
+
+                // HASHING
+
+                char *hashed_input_password = crypt(password, HASH);
+                if (strcmp(employee.password, hashed_input_password) == 0)
                 {
-                    perror("Error releasing the lock");
+                    printf("Password match\n");
+                    add_user(login_id);
+                    print_logged_in_users();
+                    // unlocking
+                    lock.l_type = F_UNLCK;
+                    if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                    {
+                        perror("Error releasing the lock");
+                    }
+                    close(fileDescriptor);
+                    return true;
                 }
-                close(fileDescriptor);
-                return true;
-            }
-            else
-            {
-                lock.l_type = F_UNLCK;
-                if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                else
                 {
-                    perror("Error releasing the lock");
+                    lock.l_type = F_UNLCK;
+                    if (fcntl(fileDescriptor, F_SETLK, &lock) == -1)
+                    {
+                        perror("Error releasing the lock");
+                    }
                 }
             }
         }

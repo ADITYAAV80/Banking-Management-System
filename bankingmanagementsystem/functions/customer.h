@@ -577,6 +577,12 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
         return false;
     }
 
+    struct flock tlock;
+    memset(&tlock, 0, sizeof(tlock));
+
+    struct flock clock;
+    memset(&clock, 0, sizeof(clock));
+
     // Lock the customer record to update the balance
     while (read(CustomerFileDescriptor, &new_customer, sizeof(struct customer_struct)) == sizeof(struct customer_struct))
     {
@@ -602,8 +608,6 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
             // Seek back to the customer record and write the updated balance
             lseek(CustomerFileDescriptor, -sizeof(struct customer_struct), SEEK_CUR);
 
-            struct flock clock;
-            memset(&clock, 0, sizeof(clock));
             clock.l_type = F_WRLCK;    // Write clock
             clock.l_whence = SEEK_CUR; // Start from the current position of the file
             clock.l_start = 0;         // Offset 0
@@ -617,8 +621,6 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
                 return false;
             }
 
-            struct flock tlock;
-            memset(&tlock, 0, sizeof(tlock));
             tlock.l_type = F_WRLCK;    // Write tlock
             tlock.l_whence = SEEK_END; // Start from the current position of the file
             tlock.l_start = 0;         // Offset 0
@@ -659,6 +661,19 @@ bool withdraw_money(int connectionFileDescriptor, char *customer_id)
     {
         perror("Error writing balance update confirmation");
         return false;
+    }
+    // Unlock the customer record
+    clock.l_type = F_UNLCK;
+    if (fcntl(CustomerFileDescriptor, F_SETLK, &clock) == -1)
+    {
+        perror("Error unlocking customer record");
+    }
+
+    // Unlock the transaction record
+    tlock.l_type = F_UNLCK;
+    if (fcntl(TransactionFileDescriptor, F_SETLK, &tlock) == -1)
+    {
+        perror("Error unlocking customer record");
     }
     readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
     close(CustomerFileDescriptor);
@@ -945,8 +960,8 @@ bool change_password_customer(int connectionFileDescriptor, char *customer_id)
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
 
             // HASHING
-            // char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
-            strcpy(customer1.password, readBuffer);
+            char *hashed_password = crypt(readBuffer, HASH); // Use SHA-512 with a salt
+            strcpy(customer1.password, hashed_password);
 
             struct flock lock;
             memset(&lock, 0, sizeof(lock));
@@ -1003,9 +1018,13 @@ bool view_transaction_details(int connectionFileDescriptor, char *customer_id)
     bzero(readBuffer, sizeof(readBuffer));
     TransactionList[0] = '\0';
 
+    char d[2] = "D";
+    char c[2] = "C";
+
     while (read(transactionFileDescriptor, &transaction, sizeof(struct transaction_struct)) == sizeof(struct transaction_struct))
     {
-        if (strcmp(transaction.source_account, customer_id) == 0 || strcmp(transaction.destination_account, customer_id) == 0)
+        if ((strcmp(transaction.source_account, customer_id) == 0 && strcmp(transaction.type, d) == 0) ||
+            (strcmp(transaction.destination_account, customer_id) == 0) && strcmp(transaction.type, c) == 0)
         {
             lock.l_type = F_RDLCK;
             lock.l_whence = SEEK_CUR;
@@ -1267,6 +1286,8 @@ bool transfer_funds(int connectionFileDescriptor, char *customer_id)
             return false;
         }
         readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+        close(customerFileDescriptor);
+        close(TransactionFileDescriptor);
         return false;
     }
 
@@ -1435,6 +1456,8 @@ bool transfer_funds(int connectionFileDescriptor, char *customer_id)
                 return false;
             }
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+            close(customerFileDescriptor);
+            close(TransactionFileDescriptor);
             return true;
         }
     }

@@ -112,6 +112,6 @@
 #define MULTIPLE_LOGIN "\nUser already logged in \nEnter any character and press ENTER to go to ADMIN MENU\n"
 #define MAX_USERS 100
 #define USERNAME_LENGTH 30
-#define HASH "UPPIGINTHABERERUCHIILLA"
+#define HASH "$6$kavaludaari$"
 
 #endif
