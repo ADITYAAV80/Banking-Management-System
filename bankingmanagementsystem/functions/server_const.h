@@ -4,6 +4,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <crypt.h>
+#include <semaphore.h>
 
 #define CHOICE "(y/n)"
 #define EXIT "Enter any character and press ENTER to EXIT\n"
@@ -11,10 +12,6 @@
 // server
 #define INITIAL_PROMPT "*********** BANK EMPLOYEE PORTAL ***********\nPlease specify by pressing:\n1 for ADMIN login\n2 for EMPLOYEE login\n3 for MANAGER login\n4 for CUSTOMER Login\nEnter any option or press any other character and press ENTER to EXIT\n"
 #define MAX_LOGGED_IN 100
-
-// login
-// #define MAX_USERS 100
-// #define USERNAME_LENGTH 30
 
 // admin
 #define S_ADMIN_LOGIN_WELCOME "*********** WELCOME ADMIN ***********\nLOGIN_ID"
@@ -129,5 +126,7 @@
 #define MAX_USERS 100
 #define USERNAME_LENGTH 30
 #define HASH "$6$kavaludaari$"
+
+extern sem_t *account_sem;
 
 #endif

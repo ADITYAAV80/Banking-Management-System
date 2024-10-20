@@ -10,14 +10,14 @@
 #include <string.h>	 // Import for string functions
 #include <stdbool.h> // Import for `bool` data type
 #include <stdlib.h>	 // Import for `atoi` functions
-#include <sys/ipc.h> // Import for IPC keys
-#include <sys/shm.h> // Import for shared memory
 
 #include "functions/server_const.h"
 #include "functions/customer.h"
 #include "functions/employee.h"
 #include "functions/manager.h"
 #include "functions/admin.h"
+
+sem_t *account_sem;
 
 // Global variables for user management in shared memory
 char (*shared_logged_in_users)[USERNAME_LENGTH];
@@ -95,6 +95,9 @@ int main()
 	shared_logged_in_users = shmat(shmid, NULL, 0);
 	shared_current_user_count = (int *)(shared_logged_in_users + MAX_USERS);
 	*shared_current_user_count = 0; // Initialize user count
+
+	// Initialize the semaphore (done once, typically at the start of the server)
+	account_sem = sem_open("/account_semaphore", O_CREAT, 0644, 1); // 1 means only one process can access
 
 	int option = 1;
 	socketFileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
