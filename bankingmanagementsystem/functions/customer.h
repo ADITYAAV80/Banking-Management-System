@@ -1666,8 +1666,6 @@ bool transfer_funds(int connectionFileDescriptor, char *customer_id)
                 close(TransactionFileDescriptor);
                 return false;
             }
-            close(customerFileDescriptor);
-            close(TransactionFileDescriptor);
             // Notify the client that the balance has been updated
             strcpy(writeBuffer, "Press character followed by Enter key to exit");
             writeBytes = write(connectionFileDescriptor, writeBuffer, strlen(writeBuffer));
@@ -1679,6 +1677,8 @@ bool transfer_funds(int connectionFileDescriptor, char *customer_id)
                 return false;
             }
             readBytes = read(connectionFileDescriptor, &readBuffer, sizeof(readBuffer));
+            close(customerFileDescriptor);
+            close(TransactionFileDescriptor);
             return true;
         }
     }
