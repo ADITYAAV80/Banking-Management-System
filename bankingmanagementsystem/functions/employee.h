@@ -292,6 +292,7 @@ bool add_customer_employee(int connectionFileDescriptor)
 
     // make customer active from the beginning
     new_customer.active = true;
+    new_customer.balance = 0;
 
     customerFileDescriptor = open("CUSTOMER_FILE", O_CREAT | O_APPEND | O_WRONLY, S_IRWXU);
     if (customerFileDescriptor == -1)
